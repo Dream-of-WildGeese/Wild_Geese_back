@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "사용자", description = "건강 프로필 등록 API")
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
