@@ -1,6 +1,7 @@
 package com.ondam.family.service;
 
 import com.ondam.family.dto.request.FamilyCreateRequest;
+import com.ondam.family.dto.request.FamilyJoinRequest;
 import com.ondam.family.dto.response.FamilyCreateResponse;
 import com.ondam.family.entity.Family;
 import com.ondam.family.repository.FamilyRepository;
@@ -68,5 +69,29 @@ public class FamilyService {
         } while (familyRepository.existsByInviteCode(code));
 
         return code;
+    }
+
+    @Transactional
+    public void joinFamily(
+            Long userId,
+            FamilyJoinRequest request
+    ) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("사용자를 찾을 수 없습니다.")
+                );
+
+        if (user.getFamily() != null) {
+            throw new IllegalStateException("이미 가족에 속해 있습니다.");
+        }
+
+        Family family = familyRepository
+                .findByInviteCode(request.inviteCode())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("유효하지 않은 초대코드입니다.")
+                );
+
+        user.joinFamily(family);
     }
 }
