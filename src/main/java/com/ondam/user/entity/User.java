@@ -1,5 +1,6 @@
 package com.ondam.user.entity;
 
+import com.ondam.family.entity.Family;
 import com.ondam.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -25,9 +26,18 @@ public class User extends BaseTimeEntity {
     @Column(name = "onboarding_completed", nullable = false)
     private boolean onboardingCompleted = false;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_id")
+    private Family family;
+
     public User(String email, String password) {
         this.email = email;
         this.password = password;
         this.onboardingCompleted = false;
     }
+
+    public void joinFamily(Family family) {
+        this.family = family;
+    }
+
 }

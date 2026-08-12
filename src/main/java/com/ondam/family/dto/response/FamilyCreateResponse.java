@@ -1,4 +1,8 @@
 package com.ondam.family.dto.response;
 
-public class FamilyCreateResponse {
+public record FamilyCreateResponse(
+        Long familyId,
+        String name,
+        String inviteCode
+) {
 }

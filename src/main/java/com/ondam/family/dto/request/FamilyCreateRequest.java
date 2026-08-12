@@ -1,4 +1,11 @@
 package com.ondam.family.dto.request;
 
-public class FamilyCreateRequest {
+import jakarta.validation.constraints.NotBlank;
+
+public record FamilyCreateRequest(
+
+        @NotBlank
+        String name
+
+) {
 }
