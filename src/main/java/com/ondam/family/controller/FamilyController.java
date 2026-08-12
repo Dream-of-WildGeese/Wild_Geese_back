@@ -64,4 +64,18 @@ public class FamilyController {
                 familyService.getMyFamily(userId)
         );
     }
+
+    @Operation(
+            summary = "가족 나가기",
+            description = "현재 사용자가 가족에서 나갑니다. 가족 생성자는 다른 구성원이 남아 있으면 나갈 수 없습니다."
+    )
+    @DeleteMapping("/me")
+    public ApiResponse<Void> leaveFamily(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+
+        familyService.leaveFamily(userId);
+
+        return ApiResponse.success(null);
+    }
 }

@@ -12,8 +12,8 @@ public enum ErrorCode {
     ALREADY_JOINED(HttpStatus.CONFLICT, "이미 가족에 속해 있습니다."),
     ALREADY_ANSWERED(HttpStatus.CONFLICT, "이미 답변한 질문입니다."),
     QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "오늘의 질문이 아직 생성되지 않았습니다."),
-    REPORT_NOT_READY(HttpStatus.BAD_REQUEST, "리포트 생성 조건이 충족되지 않았습니다.");
-
+    REPORT_NOT_READY(HttpStatus.BAD_REQUEST, "리포트 생성 조건이 충족되지 않았습니다."),
+    FAMILY_OWNER_CANNOT_LEAVE(HttpStatus.CONFLICT, "다른 가족 구성원이 남아 있어 가족 생성자는 나갈 수 없습니다.");
     private final HttpStatus status;
     private final String message;
 }
