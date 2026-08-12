@@ -35,7 +35,6 @@ public class UserService {
         return new UserCreateResponse(
                 savedUser.getId(),
                 savedUser.getEmail(),
-                savedUser.getPassword(),
                 savedUser.isOnboardingCompleted()
         );
     }

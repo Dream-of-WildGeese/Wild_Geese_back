@@ -3,14 +3,19 @@ package com.ondam.family.service;
 import com.ondam.family.dto.request.FamilyCreateRequest;
 import com.ondam.family.dto.request.FamilyJoinRequest;
 import com.ondam.family.dto.response.FamilyCreateResponse;
+import com.ondam.family.dto.response.FamilyInfoResponse;
+import com.ondam.family.dto.response.FamilyMemberResponse;
 import com.ondam.family.entity.Family;
 import com.ondam.family.repository.FamilyRepository;
+import com.ondam.global.exception.BusinessException;
+import com.ondam.global.exception.ErrorCode;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -29,11 +34,12 @@ public class FamilyService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("사용자를 찾을 수 없습니다.")
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+
                 );
 
         if (user.getFamily() != null) {
-            throw new IllegalStateException("이미 가족에 속해 있습니다.");
+            throw new BusinessException(ErrorCode.ALREADY_JOINED);
         }
 
         String inviteCode = createInviteCode();
@@ -79,19 +85,54 @@ public class FamilyService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("사용자를 찾을 수 없습니다.")
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
         if (user.getFamily() != null) {
-            throw new IllegalStateException("이미 가족에 속해 있습니다.");
+            throw new BusinessException(ErrorCode.ALREADY_JOINED);
         }
 
         Family family = familyRepository
                 .findByInviteCode(request.inviteCode())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("유효하지 않은 초대코드입니다.")
+                        new BusinessException(ErrorCode.FAMILY_NOT_FOUND)
                 );
 
         user.joinFamily(family);
+    }
+
+    @Transactional(readOnly = true)
+    public FamilyInfoResponse getMyFamily(Long userId) {
+
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 2. 사용자가 가족에 속해 있는지 확인
+        Family family = user.getFamily();
+
+        if (family == null) {
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
+
+        // 3. 같은 가족 구성원 조회
+        List<FamilyMemberResponse> members =
+                userRepository.findAllByFamilyId(family.getId())
+                        .stream()
+                        .map(member -> new FamilyMemberResponse(
+                                member.getId(),
+                                member.getEmail()
+                        ))
+                        .toList();
+
+        // 4. 가족 정보 반환
+        return new FamilyInfoResponse(
+                family.getId(),
+                family.getName(),
+                family.getInviteCode(),
+                members
+        );
     }
 }

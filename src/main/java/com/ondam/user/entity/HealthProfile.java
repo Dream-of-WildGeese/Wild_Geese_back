@@ -41,7 +41,7 @@ public class HealthProfile extends BaseTimeEntity {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "wellness_interests", columnDefinition = "json")
-    private WellnessInterest wellnessInterests;
+    private List<WellnessInterest> wellnessInterests;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "json")
@@ -57,7 +57,7 @@ public class HealthProfile extends BaseTimeEntity {
             UserRole role,
             Gender gender,
             List<String> diseases,
-            WellnessInterest wellnessInterests
+            List<WellnessInterest> wellnessInterests
     ) {
         this.name = name;
         this.birthDate = birthDate;

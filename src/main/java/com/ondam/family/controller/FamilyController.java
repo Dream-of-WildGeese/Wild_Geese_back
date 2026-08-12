@@ -3,12 +3,14 @@ package com.ondam.family.controller;
 import com.ondam.family.dto.request.FamilyCreateRequest;
 import com.ondam.family.dto.request.FamilyJoinRequest;
 import com.ondam.family.dto.response.FamilyCreateResponse;
+import com.ondam.family.dto.response.FamilyInfoResponse;
 import com.ondam.family.service.FamilyService;
 import com.ondam.global.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "가족", description = "가족 생성·참여 API")
@@ -24,6 +26,7 @@ public class FamilyController {
             description = "새로운 가족을 생성하고 초대코드를 발급합니다."
     )
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<FamilyCreateResponse> createFamily(
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody @Valid FamilyCreateRequest request
@@ -47,5 +50,18 @@ public class FamilyController {
         familyService.joinFamily(userId, request);
 
         return ApiResponse.success(null);
+    }
+
+    @Operation(
+            summary = "가족 정보 조회",
+            description = "현재 사용자가 속한 가족과 가족 구성원 정보를 조회합니다."
+    )
+    @GetMapping("/me")
+    public ApiResponse<FamilyInfoResponse> getMyFamily(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+        return ApiResponse.success(
+                familyService.getMyFamily(userId)
+        );
     }
 }

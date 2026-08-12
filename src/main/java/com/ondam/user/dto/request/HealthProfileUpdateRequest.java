@@ -25,6 +25,6 @@ public record HealthProfileUpdateRequest(
 
         List<String> diseases,
 
-        WellnessInterest wellnessInterests
+        List<WellnessInterest> wellnessInterests
 ) {
 }
