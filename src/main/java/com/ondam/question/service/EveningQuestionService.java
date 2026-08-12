@@ -21,6 +21,7 @@ import tools.jackson.core.type.TypeReference;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -187,5 +188,11 @@ public class EveningQuestionService {
         } catch (JacksonException e) {
             throw new RuntimeException("choices 파싱 실패", e);
         }
+    }
+
+    public String transcribe(MultipartFile audioFile) {
+        // TODO: 실제 STT API(Whisper, 클로바 스피치 등) 연동 필요
+        // 지금은 스텁으로 고정 문자열 반환
+        return "음성 인식 결과 예시";
     }
 }
