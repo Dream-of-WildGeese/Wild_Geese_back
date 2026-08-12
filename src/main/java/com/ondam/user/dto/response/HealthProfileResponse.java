@@ -14,6 +14,6 @@ public record HealthProfileResponse(
         UserRole role,
         Gender gender,
         List<String> diseases,
-        WellnessInterest wellnessInterests
+        List<WellnessInterest> wellnessInterests
 ) {
 }

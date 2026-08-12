@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "사용자", description = "건강 프로필 등록 API")
@@ -22,6 +23,7 @@ public class UserController {
 
     @Operation(summary = "회원가입")
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<UserCreateResponse> createUser(
             @RequestBody @Valid UserCreateRequest request
     ) {
