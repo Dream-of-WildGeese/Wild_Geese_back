@@ -1,5 +1,10 @@
 package com.ondam.question.dto.response;
 
+import com.ondam.question.entity.AnswerType;
+import com.ondam.question.entity.MetricType;
+
+import java.util.List;
+
 public record EveningQuestionResponse(
         String questionDate,
         int completedCount,
