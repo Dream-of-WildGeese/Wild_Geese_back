@@ -1,4 +1,4 @@
 package com.ondam.question.service;
 
-public class QuestionService {
+public class MorningQuestionService {
 }
