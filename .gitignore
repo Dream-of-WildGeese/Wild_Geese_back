@@ -43,4 +43,4 @@ application-secret.yml
 
 application-prod.yml
 *.jar
-.DS_Store
+.DS_Storestructure.txt

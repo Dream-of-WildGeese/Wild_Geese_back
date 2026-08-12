@@ -14,15 +14,24 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Entity
-@Table(name = "question_template")
+@Table(name = "evening_question")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class QuestionTemplate extends BaseTimeEntity {
-
+public class EveningQuestion extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    private Long templateId;
+
+    @Column(nullable = false)
+    private Long userId;
+
+    @Column(nullable = false)
+    private LocalDate questionDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -38,20 +47,16 @@ public class QuestionTemplate extends BaseTimeEntity {
     @Column(columnDefinition = "json")
     private String choices;
 
-    @Column(length = 50)
-    private String targetDisease;
-
-    @Column(nullable = false)
-    private boolean isActive = true;
-
     @Builder
-    public QuestionTemplate(MetricType metricType, String content, AnswerType answerType,
-                            String choices, String targetDisease) {
+    public EveningQuestion(Long templateId, Long userId, LocalDate questionDate,
+                           MetricType metricType, String content,
+                           AnswerType answerType, String choices) {
+        this.templateId = templateId;
+        this.userId = userId;
+        this.questionDate = questionDate;
         this.metricType = metricType;
         this.content = content;
         this.answerType = answerType;
         this.choices = choices;
-        this.targetDisease = targetDisease;
-        this.isActive = true;
     }
 }

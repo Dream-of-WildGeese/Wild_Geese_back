@@ -1,4 +1,4 @@
 package com.ondam.question.dto.response;
 
-public class NightAnswerResponse {
+public class EveningAnswerResponse {
 }
