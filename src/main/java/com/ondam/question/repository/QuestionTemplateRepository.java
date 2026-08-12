@@ -6,5 +6,5 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface QuestionTemplateRepository extends JpaRepository<QuestionTemplate, Long> {
-    List<QuestionTemplate> findByMetricType(MetricType metricType);
+    List<QuestionTemplate> findByMetricTypeAndIsActiveTrue(MetricType metricType);
 }
