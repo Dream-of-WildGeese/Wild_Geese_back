@@ -7,5 +7,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface EveningQuestionRepository extends JpaRepository<EveningQuestion, Long> {
+
     List<EveningQuestion> findByUserIdAndQuestionDate(Long userId, LocalDate questionDate);
 }
