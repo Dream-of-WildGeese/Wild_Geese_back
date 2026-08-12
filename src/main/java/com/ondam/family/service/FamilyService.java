@@ -135,4 +135,38 @@ public class FamilyService {
                 members
         );
     }
+
+    @Transactional
+    public void leaveFamily(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        Family family = user.getFamily();
+
+        if (family == null) {
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
+
+        if (family.getCreatedBy().equals(userId)) {
+
+            long memberCount = userRepository.countByFamilyId(family.getId());
+
+            if (memberCount > 1) {
+                throw new BusinessException(
+                        ErrorCode.FAMILY_OWNER_CANNOT_LEAVE
+                );
+            }
+
+            user.leaveFamily();
+
+            familyRepository.delete(family);
+
+            return;
+        }
+
+        user.leaveFamily();
+    }
 }

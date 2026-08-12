@@ -40,4 +40,8 @@ public class User extends BaseTimeEntity {
         this.family = family;
     }
 
+    public void leaveFamily(){
+        this.family=null;
+    }
+
 }
