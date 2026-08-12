@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "저녁 질문", description = "저녁 건강 체크 질문 및 답변 API")
 @RestController
@@ -31,5 +32,13 @@ public class EveningController {
             @RequestBody EveningAnswerSubmitRequest request) {
         eveningQuestionService.submitAnswers(userId, request);
         return ApiResponse.success(null);
+    }
+
+    @Operation(summary = "음성 답변 STT 변환",
+            description = "오디오 원본은 저장하지 않고 변환 결과만 반환")
+    @PostMapping(value = "/answers/voice", consumes = "multipart/form-data")
+    public ApiResponse<String> transcribeAnswer(
+            @RequestParam("audioFile") MultipartFile audioFile) {
+        return ApiResponse.success(eveningQuestionService.transcribe(audioFile));
     }
 }
