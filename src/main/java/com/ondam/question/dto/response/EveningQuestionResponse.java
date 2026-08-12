@@ -1,32 +1,19 @@
 package com.ondam.question.dto.response;
 
-import com.ondam.question.entity.AnswerType;
-import com.ondam.question.entity.MetricType;
-import java.time.LocalDate;
-import java.util.List;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
+public record EveningQuestionResponse(
+        String questionDate,
+        int completedCount,
+        int totalCount,
+        List<QuestionItem> questions
+) {
+    public record QuestionItem(       // ← 여기, EveningQuestionResponse 안쪽에 있음
+              Long questionId,
+              MetricType metricType,
+              String content,
+              AnswerType answerType,
+              List<ChoiceItem> choices,
+              Object myAnswer
+    ) {}
 
-@Getter
-@Builder
-@AllArgsConstructor
-public class EveningQuestionResponse {
-
-    private LocalDate questionDate;
-    private int completedCount;
-    private int totalCount;
-    private List<QuestionItem> questions;
-
-    @Getter
-    @Builder
-    @AllArgsConstructor
-    public static class QuestionItem {
-        private Long questionId;
-        private MetricType metricType;
-        private String content;
-        private AnswerType answerType;
-        private String choices;
-        private String myAnswer;
-    }
+    public record ChoiceItem(String label, Double value) {}   // ← 이것도 안쪽에
 }
