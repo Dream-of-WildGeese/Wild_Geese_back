@@ -1,6 +1,7 @@
 package com.ondam.family.controller;
 
 import com.ondam.family.dto.request.FamilyCreateRequest;
+import com.ondam.family.dto.request.FamilyJoinRequest;
 import com.ondam.family.dto.response.FamilyCreateResponse;
 import com.ondam.family.service.FamilyService;
 import com.ondam.global.common.ApiResponse;
@@ -31,5 +32,20 @@ public class FamilyController {
         return ApiResponse.success(
                 familyService.createFamily(userId, request)
         );
+    }
+
+    @Operation(
+            summary = "초대코드로 가족 참여",
+            description = "발급받은 초대코드를 입력해 기존 가족에 참여합니다."
+    )
+    @PostMapping("/join")
+    public ApiResponse<Void> joinFamily(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody @Valid FamilyJoinRequest request
+    ) {
+
+        familyService.joinFamily(userId, request);
+
+        return ApiResponse.success(null);
     }
 }
