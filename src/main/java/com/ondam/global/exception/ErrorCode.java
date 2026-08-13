@@ -17,7 +17,9 @@ public enum ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN,"가족 구성원을 내보낼 권한이 없습니다."),
     CANNOT_REMOVE_SELF(HttpStatus.BAD_REQUEST, "본인은 가족 나가기 API를 이용해주세요."),
     CANNOT_JOIN_SELF(HttpStatus.BAD_REQUEST, "자신의 초대코드는 입력할 수 없습니다."),
-    MEDICATION_NOT_FOUND(HttpStatus.BAD_REQUEST,"복용약을 찾을 수 없습니다.");
+    MEDICATION_NOT_FOUND(HttpStatus.BAD_REQUEST,"복용약을 찾을 수 없습니다."),
+    MEDICATION_LOG_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 복약 기록이 존재합니다."),
+    MEDICATION_SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "복약 일정을 찾을 수 없습니다.");
     private final HttpStatus status;
     private final String message;
 }

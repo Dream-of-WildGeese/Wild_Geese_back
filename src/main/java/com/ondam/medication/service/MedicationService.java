@@ -3,13 +3,13 @@ package com.ondam.medication.service;
 import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
 import com.ondam.medication.dto.request.MedicationCreateRequest;
+import com.ondam.medication.dto.request.MedicationLogCreateRequest;
 import com.ondam.medication.dto.request.MedicationUpdateRequest;
 import com.ondam.medication.dto.response.MedicationCreateResponse;
+import com.ondam.medication.dto.response.MedicationDueResponse;
 import com.ondam.medication.dto.response.MedicationLogResponse;
 import com.ondam.medication.dto.response.MedicationResponse;
-import com.ondam.medication.entity.Medication;
-import com.ondam.medication.entity.MedicationDay;
-import com.ondam.medication.entity.MedicationSchedule;
+import com.ondam.medication.entity.*;
 import com.ondam.medication.repository.MedicationLogRepository;
 import com.ondam.medication.repository.MedicationRepository;
 import com.ondam.medication.repository.MedicationScheduleRepository;
@@ -20,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -196,26 +198,29 @@ public class MedicationService {
 
                         .map(schedule -> {
 
-                            boolean taken =
+                            MedicationLogStatus status =
                                     medicationLogRepository
                                             .findByScheduleIdAndRecordDate(
                                                     schedule.getId(),
                                                     date
                                             )
-                                            .isPresent();
-
+                                            .isPresent()
+                                            ? MedicationLogStatus.TAKEN
+                                            : MedicationLogStatus.NOT_RECORDED;
                             return new MedicationLogResponse.MedicationLogItem(
                                     schedule.getMedication().getId(),
                                     schedule.getId(),
                                     schedule.getMedication().getName(),
                                     schedule.getScheduledTime(),
-                                    taken
+                                    status
                             );
                         })
                         .toList();
 
         int takenCount = (int) items.stream()
-                .filter(MedicationLogResponse.MedicationLogItem::taken)
+                .filter(item ->
+                        item.status() == MedicationLogStatus.TAKEN
+                )
                 .count();
 
         return new MedicationLogResponse(
@@ -224,6 +229,119 @@ public class MedicationService {
                 takenCount,
                 items
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<MedicationDueResponse> getDueMedications(Long userId) {
+
+        // 1. 사용자 확인
+        userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 2. 현재 날짜와 시간
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+
+        MedicationDay todayDay =
+                MedicationDay.valueOf(today.getDayOfWeek().name());
+
+        // 3. 사용자의 활성화된 복약 일정 조회
+        List<MedicationSchedule> schedules =
+                medicationScheduleRepository
+                        .findAllByMedicationUserIdAndMedicationIsActiveTrueAndIsEnabledTrue(
+                                userId
+                        );
+
+        return schedules.stream()
+
+                // 오늘 먹는 약인지
+                .filter(schedule ->
+                        schedule.getDaysOfWeek().contains(todayDay)
+                )
+
+                // 현재 시간에 먹는 약인지
+                .filter(schedule ->
+                        schedule.getScheduledTime().getHour()
+                                == now.getHour()
+                )
+
+                .map(schedule ->
+                        new MedicationDueResponse(
+                                schedule.getMedication().getId(),
+                                schedule.getId(),
+                                schedule.getMedication().getName(),
+                                schedule.getScheduledTime()
+                        )
+                )
+
+                .toList();
+    }
+
+    @Transactional
+    public void createMedicationLog(
+            Long userId,
+            MedicationLogCreateRequest request
+    ) {
+
+        // 1. 사용자 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 2. 복약 일정 조회
+        MedicationSchedule schedule =
+                medicationScheduleRepository.findById(request.scheduleId())
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.MEDICATION_SCHEDULE_NOT_FOUND
+                                )
+                        );
+
+        // 3. 이 일정이 현재 사용자의 약인지 확인
+        if (!schedule.getMedication()
+                .getUser()
+                .getId()
+                .equals(user.getId())) {
+
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 4. 같은 날짜에 이미 기록이 있는지 확인
+        boolean alreadyExists =
+                medicationLogRepository
+                        .findByScheduleIdAndRecordDate(
+                                schedule.getId(),
+                                request.recordDate()
+                        )
+                        .isPresent();
+
+        if (alreadyExists) {
+            throw new BusinessException(
+                    ErrorCode.MEDICATION_LOG_ALREADY_EXISTS
+            );
+        }
+
+        // 5. 소급 기록 여부
+        LocalDate today = LocalDate.now(
+                ZoneId.of("Asia/Seoul")
+        );
+
+        boolean isRetroactive =
+                request.recordDate().isBefore(today);
+
+        // 6. 로그 생성
+        MedicationLog log = new MedicationLog(
+                schedule,
+                request.recordDate(),
+                request.status(),
+                LocalDateTime.now(ZoneId.of("Asia/Seoul")),
+                isRetroactive
+        );
+
+        medicationLogRepository.save(log);
     }
 
 }

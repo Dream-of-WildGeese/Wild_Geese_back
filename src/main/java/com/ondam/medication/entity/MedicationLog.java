@@ -40,14 +40,20 @@ public class MedicationLog extends BaseTimeEntity {
     @Column(name = "is_retroactive", nullable = false)
     private boolean isRetroactive = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private MedicationLogStatus status;
+
     public MedicationLog(
             MedicationSchedule schedule,
             LocalDate recordDate,
+            MedicationLogStatus status,
             LocalDateTime checkedAt,
             boolean isRetroactive
     ) {
         this.schedule = schedule;
         this.recordDate = recordDate;
+        this.status = status;
         this.checkedAt = checkedAt;
         this.isRetroactive = isRetroactive;
     }
