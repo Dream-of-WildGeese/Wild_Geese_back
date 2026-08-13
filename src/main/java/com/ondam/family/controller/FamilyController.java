@@ -78,4 +78,19 @@ public class FamilyController {
 
         return ApiResponse.success(null);
     }
+
+    @Operation(
+            summary = "가족 구성원 내보내기",
+            description = "가족 생성자가 특정 가족 구성원을 가족에서 내보냅니다."
+    )
+    @DeleteMapping("/me/members/{userId}")
+    public ApiResponse<Void> removeMember(
+            @RequestHeader("X-User-Id") Long requesterId,
+            @PathVariable Long userId
+    ) {
+
+        familyService.removeMember(requesterId, userId);
+
+        return ApiResponse.success(null);
+    }
 }
