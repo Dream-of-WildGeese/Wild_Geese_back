@@ -2,8 +2,12 @@ package com.ondam.medication.controller;
 
 import com.ondam.global.common.ApiResponse;
 import com.ondam.medication.dto.request.MedicationCreateRequest;
+import com.ondam.medication.dto.request.MedicationLogCreateRequest;
+import com.ondam.medication.dto.request.MedicationLogUpdateRequest;
 import com.ondam.medication.dto.request.MedicationUpdateRequest;
 import com.ondam.medication.dto.response.MedicationCreateResponse;
+import com.ondam.medication.dto.response.MedicationDueResponse;
+import com.ondam.medication.dto.response.MedicationLogResponse;
 import com.ondam.medication.dto.response.MedicationResponse;
 import com.ondam.medication.service.MedicationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Tag(name = "복용약", description = "복용약 등록 및 알림 설정 API")
@@ -85,6 +90,72 @@ public class MedicationController {
         medicationService.deleteMedication(
                 userId,
                 medicationId
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @Operation(
+            summary = "날짜별 복약 기록 조회",
+            description = "선택한 날짜의 복약 일정과 복약 기록 여부를 조회합니다."
+    )
+    @GetMapping("/logs")
+    public ApiResponse<MedicationLogResponse> getMedicationLogs(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam LocalDate date
+    ) {
+
+        return ApiResponse.success(
+                medicationService.getMedicationLogs(userId, date)
+        );
+    }
+
+    @Operation(
+            summary = "현재 복용약 조회",
+            description = "오늘 현재 시간대에 복용해야 하는 약을 조회합니다."
+    )
+    @GetMapping("/due")
+    public ApiResponse<List<MedicationDueResponse>> getDueMedications(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+
+        return ApiResponse.success(
+                medicationService.getDueMedications(userId)
+        );
+    }
+
+    @Operation(
+            summary = "복약 기록 생성",
+            description = "사용자가 복용한 약을 체크하여 복약 기록을 생성합니다."
+    )
+    @PostMapping("/logs")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<Void> createMedicationLog(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody @Valid MedicationLogCreateRequest request
+    ) {
+
+        medicationService.createMedicationLog(
+                userId,
+                request
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @Operation(
+            summary = "복약 기록 수정",
+            description = "선택한 날짜의 복약 기록을 수정합니다."
+    )
+    @PutMapping("/logs")
+    public ApiResponse<Void> updateMedicationLogs(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody @Valid MedicationLogUpdateRequest request
+    ) {
+
+        medicationService.updateMedicationLogs(
+                userId,
+                request
         );
 
         return ApiResponse.success(null);
