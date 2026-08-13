@@ -15,6 +15,7 @@ import com.ondam.record.entity.SourceType;
 import com.ondam.record.repository.HealthRecordRepository;
 import com.ondam.user.repository.HealthProfileRepository;
 import com.ondam.user.entity.HealthProfile;
+import com.ondam.dailylog.service.DailyLogService;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
@@ -42,6 +43,8 @@ public class EveningQuestionService {
 
     private final HealthRecordRepository healthRecordRepository;
     private final HealthProfileRepository healthProfileRepository;
+
+    private final DailyLogService dailyLogService;
 
     public EveningQuestionResponse getTodayQuestions(Long userId){
 
@@ -108,7 +111,7 @@ public class EveningQuestionService {
             healthRecordRepository.save(healthRecord);
         }
 
-        // TODO: dailyLogService.refresh(userId, DateUtils.today());
+        dailyLogService.refresh(userId, DateUtils.today());
     }
 
     private List<EveningQuestion> generateTodayQuestions(Long userId, LocalDate today) {

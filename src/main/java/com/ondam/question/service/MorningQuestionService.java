@@ -11,6 +11,8 @@ import com.ondam.question.dto.response.MorningQuestionResponse;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import com.ondam.family.entity.Family;
+import com.ondam.dailylog.service.DailyLogService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +29,8 @@ public class MorningQuestionService {
     private final MorningQuestionRepository morningQuestionRepository;
     private final MorningAnswerRepository morningAnswerRepository;
     private final UserRepository userRepository;
+
+    private final DailyLogService dailyLogService;
 
     public MorningQuestionResponse getTodayQuestion(Long userId) {
         // 1. userId로 User 조회 → Family 얻기
@@ -123,6 +127,7 @@ public class MorningQuestionService {
                 .build();
 
         morningAnswerRepository.save(answer);
+        dailyLogService.refresh(userId, DateUtils.today());
     }
 
     public List<MorningQuestionHistoryItem> getMorningHistory(Long userId, LocalDate from, LocalDate to) {
