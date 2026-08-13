@@ -16,17 +16,6 @@ public class Family extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 50)
-    private String name;
-
-    @Column(
-            name = "invite_code",
-            nullable = false,
-            unique = true,
-            length = 10
-    )
-    private String inviteCode;
-
     @Column(
             name = "created_by",
             nullable = false
@@ -34,12 +23,8 @@ public class Family extends BaseTimeEntity {
     private Long createdBy;
 
     public Family(
-            String name,
-            String inviteCode,
             Long createdBy
     ) {
-        this.name = name;
-        this.inviteCode = inviteCode;
         this.createdBy = createdBy;
     }
 }

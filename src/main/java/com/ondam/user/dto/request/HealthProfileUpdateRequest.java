@@ -18,9 +18,6 @@ public record HealthProfileUpdateRequest(
         LocalDate birthDate,
 
         @NotNull
-        UserRole role,
-
-        @NotNull
         Gender gender,
 
         List<String> diseases,

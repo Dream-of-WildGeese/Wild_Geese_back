@@ -23,6 +23,9 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false, length = 50)
+    private String name;
+
     @Column(name = "onboarding_completed", nullable = false)
     private boolean onboardingCompleted = false;
 
@@ -30,10 +33,25 @@ public class User extends BaseTimeEntity {
     @JoinColumn(name = "family_id")
     private Family family;
 
-    public User(String email, String password) {
+    @Column(name = "invite_code", nullable = false, unique = true, length = 6)
+    private String inviteCode;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
+    public User(
+            String email,
+            String password,
+            String name,
+            UserRole role,
+            String inviteCode
+    ) {
         this.email = email;
         this.password = password;
-        this.onboardingCompleted = false;
+        this.name = name;
+        this.role = role;
+        this.inviteCode = inviteCode;
     }
 
     public void joinFamily(Family family) {

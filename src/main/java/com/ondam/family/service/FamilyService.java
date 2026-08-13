@@ -1,22 +1,22 @@
 package com.ondam.family.service;
 
-import com.ondam.family.dto.request.FamilyCreateRequest;
 import com.ondam.family.dto.request.FamilyJoinRequest;
-import com.ondam.family.dto.response.FamilyCreateResponse;
 import com.ondam.family.dto.response.FamilyInfoResponse;
+import com.ondam.family.dto.response.FamilyJoinResponse;
 import com.ondam.family.dto.response.FamilyMemberResponse;
 import com.ondam.family.entity.Family;
 import com.ondam.family.repository.FamilyRepository;
 import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
+import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.entity.User;
+import com.ondam.user.repository.HealthProfileRepository;
 import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,99 +25,82 @@ public class FamilyService {
 
     private final FamilyRepository familyRepository;
     private final UserRepository userRepository;
+    private final HealthProfileRepository healthProfileRepository;
 
     @Transactional
-    public FamilyCreateResponse createFamily(
-            Long userId,
-            FamilyCreateRequest request
-    ) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new BusinessException(ErrorCode.USER_NOT_FOUND)
-
-                );
-
-        if (user.getFamily() != null) {
-            throw new BusinessException(ErrorCode.ALREADY_JOINED);
-        }
-
-        String inviteCode = createInviteCode();
-
-        Family family = new Family(
-                request.name(),
-                inviteCode,
-                userId
-        );
-
-        Family savedFamily = familyRepository.save(family);
-
-        user.joinFamily(savedFamily);
-
-        return new FamilyCreateResponse(
-                savedFamily.getId(),
-                savedFamily.getName(),
-                savedFamily.getInviteCode()
-        );
-    }
-
-    private String createInviteCode() {
-
-        String code;
-
-        do {
-            code = UUID.randomUUID()
-                    .toString()
-                    .replace("-", "")
-                    .substring(0, 6)
-                    .toUpperCase();
-
-        } while (familyRepository.existsByInviteCode(code));
-
-        return code;
-    }
-
-    @Transactional
-    public void joinFamily(
+    public FamilyJoinResponse joinFamily(
             Long userId,
             FamilyJoinRequest request
     ) {
 
-        User user = userRepository.findById(userId)
+        // 1. 코드를 입력한 사용자
+        User joiningUser = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        if (user.getFamily() != null) {
+        // 2. 이미 가족에 속해 있으면 참여 불가
+        if (joiningUser.getFamily() != null) {
             throw new BusinessException(ErrorCode.ALREADY_JOINED);
         }
 
-        Family family = familyRepository
+        // 3. 입력한 초대코드의 주인 찾기
+        User inviter = userRepository
                 .findByInviteCode(request.inviteCode())
                 .orElseThrow(() ->
-                        new BusinessException(ErrorCode.FAMILY_NOT_FOUND)
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        user.joinFamily(family);
+        // 4. 자기 자신의 코드 입력 방지
+        if (joiningUser.getId().equals(inviter.getId())) {
+            throw new BusinessException(ErrorCode.CANNOT_JOIN_SELF);
+        }
+
+        // 5. 초대한 사용자가 이미 속한 가족 확인
+        Family family = inviter.getFamily();
+
+        // 6. 초대한 사람도 아직 가족이 없다면 새 가족 생성
+        if (family == null) {
+
+            Family newFamily = new Family(
+                    inviter.getId()
+            );
+
+            family = familyRepository.save(newFamily);
+
+            inviter.joinFamily(family);
+        }
+
+        // 7. 코드 입력한 사용자도 같은 가족에 연결
+        joiningUser.joinFamily(family);
+
+        // 8. 연결 완료 화면에 보여줄 초대한 사람 이름 조회
+        HealthProfile inviterProfile =
+                healthProfileRepository.findByUserId(inviter.getId())
+                        .orElseThrow(() ->
+                                new BusinessException(ErrorCode.USER_NOT_FOUND)
+                        );
+
+        return new FamilyJoinResponse(
+                family.getId(),
+                inviter.getId(),
+                inviter.getName()
+        );
     }
 
-    @Transactional(readOnly = true)
     public FamilyInfoResponse getMyFamily(Long userId) {
 
-        // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        // 2. 사용자가 가족에 속해 있는지 확인
         Family family = user.getFamily();
 
         if (family == null) {
             throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
         }
 
-        // 3. 같은 가족 구성원 조회
         List<FamilyMemberResponse> members =
                 userRepository.findAllByFamilyId(family.getId())
                         .stream()
@@ -127,11 +110,8 @@ public class FamilyService {
                         ))
                         .toList();
 
-        // 4. 가족 정보 반환
         return new FamilyInfoResponse(
                 family.getId(),
-                family.getName(),
-                family.getInviteCode(),
                 members
         );
     }
@@ -152,7 +132,8 @@ public class FamilyService {
 
         if (family.getCreatedBy().equals(userId)) {
 
-            long memberCount = userRepository.countByFamilyId(family.getId());
+            long memberCount =
+                    userRepository.countByFamilyId(family.getId());
 
             if (memberCount > 1) {
                 throw new BusinessException(
@@ -161,9 +142,7 @@ public class FamilyService {
             }
 
             user.leaveFamily();
-
             familyRepository.delete(family);
-
             return;
         }
 
@@ -190,7 +169,6 @@ public class FamilyService {
         if (!family.getCreatedBy().equals(requesterId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
-
 
         if (requesterId.equals(targetUserId)) {
             throw new BusinessException(ErrorCode.CANNOT_REMOVE_SELF);

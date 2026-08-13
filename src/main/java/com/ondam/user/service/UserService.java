@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.management.Notification;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +33,14 @@ public class UserService {
     @Transactional
     public UserCreateResponse createUser(UserCreateRequest request) {
 
+        String inviteCode = createInviteCode();
+
         User user = new User(
                 request.email(),
-                request.password()
+                request.password(),
+                request.name(),
+                request.role(),
+                inviteCode
         );
 
         User savedUser = userRepository.save(user);
@@ -42,9 +48,28 @@ public class UserService {
         return new UserCreateResponse(
                 savedUser.getId(),
                 savedUser.getEmail(),
+                savedUser.getName(),
+                savedUser.getRole(),
+                savedUser.getInviteCode(),
                 savedUser.isOnboardingCompleted()
         );
     }
+    private String createInviteCode() {
+
+        String code;
+
+        do {
+            code = UUID.randomUUID()
+                    .toString()
+                    .replace("-", "")
+                    .substring(0, 6)
+                    .toUpperCase();
+
+        } while (userRepository.existsByInviteCode(code));
+
+        return code;
+    }
+
 
     @Transactional
     public HealthProfileResponse updateHealthProfile(
@@ -56,9 +81,7 @@ public class UserService {
         HealthProfile profile = healthProfileRepository.findByUserId(userId).orElseGet(() -> new HealthProfile(user));
 
         profile.update(
-                request.name(),
                 request.birthDate(),
-                request.role(),
                 request.gender(),
                 request.diseases(),
                 request.wellnessInterests()
@@ -68,9 +91,7 @@ public class UserService {
 
         return new HealthProfileResponse(
                 savedProfile.getId(),
-                savedProfile.getName(),
                 savedProfile.getBirthDate(),
-                savedProfile.getRole(),
                 savedProfile.getGender(),
                 savedProfile.getDiseases(),
                 savedProfile.getWellnessInterests()
