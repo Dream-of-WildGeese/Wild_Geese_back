@@ -2,6 +2,7 @@ package com.ondam.question.controller;
 
 import com.ondam.global.common.ApiResponse;
 import com.ondam.question.dto.response.EveningQuestionResponse;
+import com.ondam.question.dto.response.VoiceTranscribeResponse;
 import com.ondam.question.dto.request.EveningAnswerSubmitRequest;
 import com.ondam.question.service.EveningQuestionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,10 +36,11 @@ public class EveningController {
     }
 
     @Operation(summary = "음성 답변 STT 변환",
-            description = "오디오 원본은 저장하지 않고 변환 결과만 반환")
+            description = "음성을 텍스트로 변환하고, 선택지 중 가장 가까운 것을 함께 반환합니다. 오디오 원본은 저장하지 않습니다.")
     @PostMapping(value = "/answers/voice", consumes = "multipart/form-data")
-    public ApiResponse<String> transcribeAnswer(
-            @RequestParam("audioFile") MultipartFile audioFile) {
-        return ApiResponse.success(eveningQuestionService.transcribe(audioFile));
+    public ApiResponse<VoiceTranscribeResponse> transcribeAnswer(
+            @RequestParam Long questionId,
+            @RequestParam MultipartFile audioFile) {
+        return ApiResponse.success(eveningQuestionService.transcribe(questionId, audioFile));
     }
 }

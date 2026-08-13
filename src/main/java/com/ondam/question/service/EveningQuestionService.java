@@ -9,6 +9,7 @@ import com.ondam.question.repository.EveningAnswerRepository;
 import com.ondam.question.repository.EveningQuestionRepository;
 import com.ondam.question.repository.QuestionTemplateRepository;
 import com.ondam.question.dto.response.EveningQuestionResponse;
+import com.ondam.question.dto.response.VoiceTranscribeResponse;
 import com.ondam.question.dto.request.EveningAnswerSubmitRequest;
 import com.ondam.record.entity.HealthRecord;
 import com.ondam.record.entity.SourceType;
@@ -227,5 +228,25 @@ public class EveningQuestionService {
 
         List<QuestionTemplate> fallback = questionTemplateRepository.findByMetricTypeAndIsActiveTrue(type);
         return fallback.get(0);
+    }
+
+    public VoiceTranscribeResponse transcribe(Long questionId, MultipartFile audioFile) {
+
+        // TODO: 실제 STT API(Whisper, 클로바 스피치 등) 연동 필요. 지금은 스텁으로 고정 문자열 반환.
+        String transcript = "음성 인식 결과 예시";
+
+        // TODO: 실제로는 LLM에게 "이 텍스트가 어느 선택지에 가까운지" 판단시켜야 함.
+        //       지금은 첫 번째 선택지를 임시로 반환.
+        Optional<EveningQuestion> questionOpt = eveningQuestionRepository.findById(questionId);
+        String matchedChoice = null;
+
+        if (questionOpt.isPresent()) {
+            List<EveningQuestionResponse.ChoiceItem> choices = parseChoices(questionOpt.get().getChoices());
+            if (choices != null && !choices.isEmpty()) {
+                matchedChoice = choices.get(0).label();
+            }
+        }
+
+        return new VoiceTranscribeResponse(transcript, matchedChoice);
     }
 }
