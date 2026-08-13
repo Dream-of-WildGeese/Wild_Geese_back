@@ -1,17 +1,16 @@
 package com.ondam.family.controller;
 
-import com.ondam.family.dto.request.FamilyCreateRequest;
 import com.ondam.family.dto.request.FamilyJoinRequest;
-import com.ondam.family.dto.response.FamilyCreateResponse;
 import com.ondam.family.dto.response.FamilyInfoResponse;
+import com.ondam.family.dto.response.FamilyJoinResponse;
 import com.ondam.family.service.FamilyService;
 import com.ondam.global.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
 
 @Tag(name = "가족", description = "가족 생성·참여 API")
 @RestController
@@ -22,34 +21,17 @@ public class FamilyController {
     private final FamilyService familyService;
 
     @Operation(
-            summary = "가족 생성",
-            description = "새로운 가족을 생성하고 초대코드를 발급합니다."
-    )
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<FamilyCreateResponse> createFamily(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestBody @Valid FamilyCreateRequest request
-    ) {
-
-        return ApiResponse.success(
-                familyService.createFamily(userId, request)
-        );
-    }
-
-    @Operation(
             summary = "초대코드로 가족 참여",
             description = "발급받은 초대코드를 입력해 기존 가족에 참여합니다."
     )
     @PostMapping("/join")
-    public ApiResponse<Void> joinFamily(
+    public ApiResponse<FamilyJoinResponse> joinFamily(
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody @Valid FamilyJoinRequest request
     ) {
-
-        familyService.joinFamily(userId, request);
-
-        return ApiResponse.success(null);
+        return ApiResponse.success(
+                familyService.joinFamily(userId, request)
+        );
     }
 
     @Operation(

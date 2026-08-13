@@ -4,7 +4,6 @@ public enum WellnessInterest {
     SLEEP,
     ACTIVITY,
     MEAL,
-    MOOD,
-    ENERGY,
-    STRESS
+    MEDICINE,
+    MOOD
 }

@@ -25,9 +25,6 @@ public class HealthProfile extends BaseTimeEntity {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(nullable = false, length = 50)
-    private String name;
-
     @Column(name = "birth_date", nullable = false)
     private LocalDate birthDate;
 
@@ -52,16 +49,12 @@ public class HealthProfile extends BaseTimeEntity {
     }
 
     public void update(
-            String name,
             LocalDate birthDate,
-            UserRole role,
             Gender gender,
             List<String> diseases,
             List<WellnessInterest> wellnessInterests
     ) {
-        this.name = name;
         this.birthDate = birthDate;
-        this.role = role;
         this.gender = gender;
         this.diseases = diseases;
         this.wellnessInterests = wellnessInterests;

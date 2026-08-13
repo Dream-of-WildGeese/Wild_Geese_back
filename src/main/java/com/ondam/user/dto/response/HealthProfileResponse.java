@@ -9,9 +9,7 @@ import java.util.List;
 
 public record HealthProfileResponse(
         Long healthProfileId,
-        String name,
         LocalDate birthDate,
-        UserRole role,
         Gender gender,
         List<String> diseases,
         List<WellnessInterest> wellnessInterests
