@@ -72,4 +72,22 @@ public class MedicationController {
         return ApiResponse.success(null);
     }
 
+    @Operation(
+            summary = "복약 삭제",
+            description = "등록된 복용약을 삭제합니다."
+    )
+    @DeleteMapping("/{medicationId}")
+    public ApiResponse<Void> deleteMedication(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long medicationId
+    ) {
+
+        medicationService.deleteMedication(
+                userId,
+                medicationId
+        );
+
+        return ApiResponse.success(null);
+    }
+
 }

@@ -142,4 +142,19 @@ public class MedicationService {
         }
     }
 
+    @Transactional
+    public void deleteMedication(
+            Long userId,
+            Long medicationId
+    ) {
+
+        Medication medication = medicationRepository
+                .findByIdAndUserId(medicationId, userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.MEDICATION_NOT_FOUND)
+                );
+
+        medication.deactivate();
+    }
+
 }
