@@ -45,12 +45,16 @@ public class NotificationSetting extends BaseTimeEntity {
     @Column(name="report_enabled")
     private boolean reportEnabled=true;
 
+    @Column(name = "medication_enabled", nullable = false)
+    private boolean medicationEnabled = true;
+
     public NotificationSetting(User user)
     {
         this.user=user;
         this.morningEnabled =true;
         this.eveningEnabled =true;
         this.reportEnabled=true;
+        this.medicationEnabled =true;
 
     }
 
@@ -60,7 +64,8 @@ public class NotificationSetting extends BaseTimeEntity {
             LocalTime eveningTime,
             boolean eveningEnabled,
             boolean reportEnabled,
-            DayOfWeek reportDayOfWeek
+            DayOfWeek reportDayOfWeek,
+            boolean medicationEnabled
     ){
         this.morningTime = morningTime;
         this.morningEnabled = morningEnabled;
@@ -68,6 +73,8 @@ public class NotificationSetting extends BaseTimeEntity {
         this.eveningEnabled = eveningEnabled;
         this.reportEnabled = reportEnabled;
         this.reportDayOfWeek = reportDayOfWeek;
+        this.medicationEnabled = medicationEnabled;
     }
+
 
 }

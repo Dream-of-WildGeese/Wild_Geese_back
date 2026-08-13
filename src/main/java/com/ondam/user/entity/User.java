@@ -61,5 +61,8 @@ public class User extends BaseTimeEntity {
     public void leaveFamily(){
         this.family=null;
     }
+    public void completeOnboarding() {
+        this.onboardingCompleted = true;
+    }
 
 }
