@@ -57,4 +57,15 @@ public class MedicationLog extends BaseTimeEntity {
         this.checkedAt = checkedAt;
         this.isRetroactive = isRetroactive;
     }
+
+    public void updateStatus(
+            MedicationLogStatus status,
+            LocalDateTime checkedAt,
+            boolean isRetroactive
+    ) {
+        this.status = status;
+        this.checkedAt = checkedAt;
+        this.isRetroactive = isRetroactive;
+    }
+
 }

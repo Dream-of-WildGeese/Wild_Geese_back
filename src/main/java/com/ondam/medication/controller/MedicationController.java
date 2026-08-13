@@ -3,6 +3,7 @@ package com.ondam.medication.controller;
 import com.ondam.global.common.ApiResponse;
 import com.ondam.medication.dto.request.MedicationCreateRequest;
 import com.ondam.medication.dto.request.MedicationLogCreateRequest;
+import com.ondam.medication.dto.request.MedicationLogUpdateRequest;
 import com.ondam.medication.dto.request.MedicationUpdateRequest;
 import com.ondam.medication.dto.response.MedicationCreateResponse;
 import com.ondam.medication.dto.response.MedicationDueResponse;
@@ -135,6 +136,24 @@ public class MedicationController {
     ) {
 
         medicationService.createMedicationLog(
+                userId,
+                request
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @Operation(
+            summary = "복약 기록 수정",
+            description = "선택한 날짜의 복약 기록을 수정합니다."
+    )
+    @PutMapping("/logs")
+    public ApiResponse<Void> updateMedicationLogs(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody @Valid MedicationLogUpdateRequest request
+    ) {
+
+        medicationService.updateMedicationLogs(
                 userId,
                 request
         );

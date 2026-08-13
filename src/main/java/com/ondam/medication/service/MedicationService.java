@@ -4,6 +4,7 @@ import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
 import com.ondam.medication.dto.request.MedicationCreateRequest;
 import com.ondam.medication.dto.request.MedicationLogCreateRequest;
+import com.ondam.medication.dto.request.MedicationLogUpdateRequest;
 import com.ondam.medication.dto.request.MedicationUpdateRequest;
 import com.ondam.medication.dto.response.MedicationCreateResponse;
 import com.ondam.medication.dto.response.MedicationDueResponse;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -342,6 +344,82 @@ public class MedicationService {
         );
 
         medicationLogRepository.save(log);
+    }
+
+    @Transactional
+    public void updateMedicationLogs(
+            Long userId,
+            MedicationLogUpdateRequest request
+    ) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        LocalDate today =
+                LocalDate.now(ZoneId.of("Asia/Seoul"));
+
+        LocalDateTime now =
+                LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+
+        boolean isRetroactive =
+                request.recordDate().isBefore(today);
+
+        for (MedicationLogUpdateRequest.MedicationLogItem item
+                : request.logs()) {
+
+            MedicationSchedule schedule =
+                    medicationScheduleRepository.findById(item.scheduleId())
+                            .orElseThrow(() ->
+                                    new BusinessException(
+                                            ErrorCode.MEDICATION_SCHEDULE_NOT_FOUND
+                                    )
+                            );
+
+            // 다른 사람 약 수정 방지
+            if (!schedule.getMedication()
+                    .getUser()
+                    .getId()
+                    .equals(user.getId())) {
+
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
+
+            Optional<MedicationLog> logOpt =
+                    medicationLogRepository
+                            .findByScheduleIdAndRecordDate(
+                                    schedule.getId(),
+                                    request.recordDate()
+                            );
+
+            if (logOpt.isPresent()) {
+
+                MedicationLog log = logOpt.get();
+
+                log.updateStatus(
+                        item.status(),
+                        now,
+                        isRetroactive
+                );
+
+            } else {
+
+                // 기록이 없는데 TAKEN으로 수정하는 경우 새 로그 생성
+                if (item.status() == MedicationLogStatus.TAKEN) {
+
+                    MedicationLog log = new MedicationLog(
+                            schedule,
+                            request.recordDate(),
+                            MedicationLogStatus.TAKEN,
+                            now,
+                            isRetroactive
+                    );
+
+                    medicationLogRepository.save(log);
+                }
+            }
+        }
     }
 
 }
