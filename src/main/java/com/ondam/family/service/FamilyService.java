@@ -8,9 +8,7 @@ import com.ondam.family.entity.Family;
 import com.ondam.family.repository.FamilyRepository;
 import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
-import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.entity.User;
-import com.ondam.user.repository.HealthProfileRepository;
 import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,7 +23,6 @@ public class FamilyService {
 
     private final FamilyRepository familyRepository;
     private final UserRepository userRepository;
-    private final HealthProfileRepository healthProfileRepository;
 
     @Transactional
     public FamilyJoinResponse joinFamily(
@@ -73,13 +70,6 @@ public class FamilyService {
 
         // 7. 코드 입력한 사용자도 같은 가족에 연결
         joiningUser.joinFamily(family);
-
-        // 8. 연결 완료 화면에 보여줄 초대한 사람 이름 조회
-        HealthProfile inviterProfile =
-                healthProfileRepository.findByUserId(inviter.getId())
-                        .orElseThrow(() ->
-                                new BusinessException(ErrorCode.USER_NOT_FOUND)
-                        );
 
         return new FamilyJoinResponse(
                 family.getId(),

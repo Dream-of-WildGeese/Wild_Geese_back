@@ -8,7 +8,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
 
-public record MedicationCreateRequest(
+public record MedicationUpdateRequest(
         String name,
         List<LocalTime> scheduledTimes,
         Set<MedicationDay> daysOfWeek
