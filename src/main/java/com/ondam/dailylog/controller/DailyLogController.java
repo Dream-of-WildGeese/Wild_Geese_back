@@ -25,4 +25,12 @@ public class DailyLogController {
             @RequestParam LocalDate date) {
         return ApiResponse.success(dailyLogService.getDailyLog(userId, date));
     }
+
+    @Operation(summary = "가족 구성원 일지 조회", description = "가족 구성원의 일지를 조회합니다.")
+    @GetMapping("/family/{userId}")
+    public ApiResponse<DailyLogResponse> getFamilyDailyLog(
+            @PathVariable Long userId,
+            @RequestParam LocalDate date) {
+        return ApiResponse.success(dailyLogService.getDailyLog(userId, date));
+    }
 }
