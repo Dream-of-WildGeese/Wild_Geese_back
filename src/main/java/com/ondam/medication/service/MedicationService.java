@@ -5,9 +5,12 @@ import com.ondam.global.exception.ErrorCode;
 import com.ondam.medication.dto.request.MedicationCreateRequest;
 import com.ondam.medication.dto.request.MedicationUpdateRequest;
 import com.ondam.medication.dto.response.MedicationCreateResponse;
+import com.ondam.medication.dto.response.MedicationLogResponse;
 import com.ondam.medication.dto.response.MedicationResponse;
 import com.ondam.medication.entity.Medication;
+import com.ondam.medication.entity.MedicationDay;
 import com.ondam.medication.entity.MedicationSchedule;
+import com.ondam.medication.repository.MedicationLogRepository;
 import com.ondam.medication.repository.MedicationRepository;
 import com.ondam.medication.repository.MedicationScheduleRepository;
 import com.ondam.user.entity.User;
@@ -16,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -27,6 +31,7 @@ public class MedicationService {
     private final MedicationRepository medicationRepository;
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final UserRepository userRepository;
+    private final MedicationLogRepository medicationLogRepository;
 
     @Transactional
     public MedicationCreateResponse createMedication(
@@ -155,6 +160,70 @@ public class MedicationService {
                 );
 
         medication.deactivate();
+    }
+
+    @Transactional(readOnly = true)
+    public MedicationLogResponse getMedicationLogs(
+            Long userId,
+            LocalDate date
+    ) {
+
+        // 사용자 존재 확인
+        userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 해당 사용자의 활성 복약 일정 전체 조회
+        List<MedicationSchedule> schedules =
+                medicationScheduleRepository
+                        .findAllByMedicationUserIdAndMedicationIsActiveTrueAndIsEnabledTrue(
+                                userId
+                        );
+
+        List<MedicationLogResponse.MedicationLogItem> items =
+                schedules.stream()
+
+                        // 요청 날짜의 요일에 먹는 약만
+                        .filter(schedule ->
+                                schedule.getDaysOfWeek()
+                                        .contains(
+                                                MedicationDay.valueOf(
+                                                        date.getDayOfWeek().name()
+                                                )
+                                        )
+                        )
+
+                        .map(schedule -> {
+
+                            boolean taken =
+                                    medicationLogRepository
+                                            .findByScheduleIdAndRecordDate(
+                                                    schedule.getId(),
+                                                    date
+                                            )
+                                            .isPresent();
+
+                            return new MedicationLogResponse.MedicationLogItem(
+                                    schedule.getMedication().getId(),
+                                    schedule.getId(),
+                                    schedule.getMedication().getName(),
+                                    schedule.getScheduledTime(),
+                                    taken
+                            );
+                        })
+                        .toList();
+
+        int takenCount = (int) items.stream()
+                .filter(MedicationLogResponse.MedicationLogItem::taken)
+                .count();
+
+        return new MedicationLogResponse(
+                date.toString(),
+                items.size(),
+                takenCount,
+                items
+        );
     }
 
 }
