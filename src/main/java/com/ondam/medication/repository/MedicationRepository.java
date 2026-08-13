@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface MedicationRepository
         extends JpaRepository<Medication, Long> {
-    Optional<Medication> findByIdAndUserId(Long medicationId, Long userId);
+    Optional<Medication> findByIdAndUserId(Long medicationId, Long userId); // 다른 사용자의 약을 지우는 거 막아야 되기 때문
     List<Medication> findAllByUserIdAndIsActiveTrue(Long userId);
+
+
 }
