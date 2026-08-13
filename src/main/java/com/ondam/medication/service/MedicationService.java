@@ -4,6 +4,7 @@ import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
 import com.ondam.medication.dto.request.MedicationCreateRequest;
 import com.ondam.medication.dto.response.MedicationCreateResponse;
+import com.ondam.medication.dto.response.MedicationResponse;
 import com.ondam.medication.entity.Medication;
 import com.ondam.medication.entity.MedicationSchedule;
 import com.ondam.medication.repository.MedicationRepository;
@@ -13,6 +14,8 @@ import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -59,5 +62,45 @@ public class MedicationService {
                 savedMedication.getId(),
                 savedMedication.getName()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<MedicationResponse> getMedications(Long userId) {
+
+        // 1. 사용자 존재 확인
+        userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 2. 사용자의 활성 약 조회
+        List<Medication> medications =
+                medicationRepository.findAllByUserIdAndIsActiveTrue(userId);
+
+        // 3. Medication → Response 변환
+        return medications.stream()
+                .map(medication -> {
+
+                    List<MedicationResponse.ScheduleResponse> schedules =
+                            medicationScheduleRepository
+                                    .findAllByMedicationId(medication.getId())
+                                    .stream()
+                                    .map(schedule ->
+                                            new MedicationResponse.ScheduleResponse(
+                                                    schedule.getId(),
+                                                    schedule.getScheduledTime(),
+                                                    schedule.getDaysOfWeek(),
+                                                    schedule.isEnabled()
+                                            )
+                                    )
+                                    .toList();
+
+                    return new MedicationResponse(
+                            medication.getId(),
+                            medication.getName(),
+                            schedules
+                    );
+                })
+                .toList();
     }
 }
