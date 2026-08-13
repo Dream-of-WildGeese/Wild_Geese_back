@@ -3,6 +3,7 @@ package com.ondam.medication.service;
 import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
 import com.ondam.medication.dto.request.MedicationCreateRequest;
+import com.ondam.medication.dto.request.MedicationUpdateRequest;
 import com.ondam.medication.dto.response.MedicationCreateResponse;
 import com.ondam.medication.dto.response.MedicationResponse;
 import com.ondam.medication.entity.Medication;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -103,4 +105,41 @@ public class MedicationService {
                 })
                 .toList();
     }
+    @Transactional
+    public void updateMedication(
+            Long userId,
+            Long medicationId,
+            MedicationUpdateRequest request
+    ) {
+
+        Medication medication = medicationRepository
+                .findByIdAndUserId(medicationId, userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.MEDICATION_NOT_FOUND)
+                );
+
+        // 약 이름 수정
+        medication.update(
+                request.name(),
+                medication.isActive()
+        );
+
+        // 기존 일정 제거
+        medicationScheduleRepository
+                .deleteAllByMedicationId(medicationId);
+
+        // 새로운 일정 생성
+        for (LocalTime scheduledTime : request.scheduledTimes()) {
+
+            MedicationSchedule schedule =
+                    new MedicationSchedule(
+                            medication,
+                            scheduledTime,
+                            request.daysOfWeek()
+                    );
+
+            medicationScheduleRepository.save(schedule);
+        }
+    }
+
 }
