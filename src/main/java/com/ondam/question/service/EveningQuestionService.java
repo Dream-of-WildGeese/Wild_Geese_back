@@ -13,6 +13,8 @@ import com.ondam.question.dto.request.EveningAnswerSubmitRequest;
 import com.ondam.record.entity.HealthRecord;
 import com.ondam.record.entity.SourceType;
 import com.ondam.record.repository.HealthRecordRepository;
+import com.ondam.user.repository.HealthProfileRepository;
+import com.ondam.user.entity.HealthProfile;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
@@ -39,6 +41,7 @@ public class EveningQuestionService {
     private final ObjectMapper objectMapper;
 
     private final HealthRecordRepository healthRecordRepository;
+    private final HealthProfileRepository healthProfileRepository;
 
     public EveningQuestionResponse getTodayQuestions(Long userId){
 
@@ -109,8 +112,6 @@ public class EveningQuestionService {
     }
 
     private List<EveningQuestion> generateTodayQuestions(Long userId, LocalDate today) {
-        // TODO: CUSTOM 타입은 지금 첫 번째 템플릿을 그냥 가져옴.
-        //       나중에 HealthProfile.diseases/wellnessInterests와 매칭하는 로직으로 고도화 필요.
 
         List<EveningQuestion> questions = new ArrayList<>();
 
@@ -118,9 +119,15 @@ public class EveningQuestionService {
                 MetricType.MEAL, MetricType.ACTIVITY, MetricType.CUSTOM);
 
         for (MetricType type : types) {
-            List<QuestionTemplate> candidates = questionTemplateRepository.findByMetricTypeAndIsActiveTrue(type);
 
-            QuestionTemplate template = candidates.get(0);
+            QuestionTemplate template;
+
+            if(type == MetricType.CUSTOM){
+                template = pickCustomTemplate(userId, type);   // 새로 만들 메서드
+            } else{
+                List<QuestionTemplate> candidates = questionTemplateRepository.findByMetricTypeAndIsActiveTrue(type);
+                template = candidates.get(0);
+            }
 
             EveningQuestion question = EveningQuestion.builder()
                     .templateId(template.getId())
@@ -193,5 +200,29 @@ public class EveningQuestionService {
         // TODO: 실제 STT API(Whisper, 클로바 스피치 등) 연동 필요
         // 지금은 스텁으로 고정 문자열 반환
         return "음성 인식 결과 예시";
+    }
+
+    private QuestionTemplate pickCustomTemplate(Long userId, MetricType type) {
+
+        Optional<HealthProfile> profileOpt = healthProfileRepository.findByUserId(userId);
+
+        if (profileOpt.isPresent()) {
+            HealthProfile profile = profileOpt.get();
+            List<String> diseases = profile.getDiseases();
+
+            if (diseases != null && !diseases.isEmpty()) {
+                for (String disease : diseases) {
+                    List<QuestionTemplate> matched = questionTemplateRepository
+                            .findByMetricTypeAndTargetDiseaseAndIsActiveTrue(type, disease);
+
+                    if (!matched.isEmpty()) {
+                        return matched.get(0);   // 찾았으면 바로 반환하고 메서드 종료
+                    }
+                }
+            }
+        }
+
+        List<QuestionTemplate> fallback = questionTemplateRepository.findByMetricTypeAndIsActiveTrue(type);
+        return fallback.get(0);
     }
 }
