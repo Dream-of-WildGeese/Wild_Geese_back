@@ -3,23 +3,17 @@ package com.ondam.question.service;
 import com.ondam.global.common.DateUtils;
 import com.ondam.question.entity.MorningQuestion;
 import com.ondam.question.entity.MorningAnswer;
-import com.ondam.question.entity.InputType;
 import com.ondam.question.repository.MorningQuestionRepository;
 import com.ondam.question.repository.MorningAnswerRepository;
 import com.ondam.question.dto.request.MorningAnswerRequest;
 import com.ondam.question.dto.response.MorningQuestionHistoryItem;
+import com.ondam.question.dto.response.MorningQuestionResponse;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import com.ondam.family.entity.Family;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.type.descriptor.jdbc.JdbcTypeFamilyInformation;
 import org.springframework.stereotype.Service;
 
-import com.ondam.question.dto.response.MorningQuestionResponse;
-import com.ondam.user.entity.HealthProfile;
-import com.ondam.user.repository.HealthProfileRepository;
-
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,7 +27,6 @@ public class MorningQuestionService {
     private final MorningQuestionRepository morningQuestionRepository;
     private final MorningAnswerRepository morningAnswerRepository;
     private final UserRepository userRepository;
-    private final HealthProfileRepository healthProfileRepository;
 
     public MorningQuestionResponse getTodayQuestion(Long userId) {
         // 1. userId로 User 조회 → Family 얻기
@@ -68,21 +61,16 @@ public class MorningQuestionService {
         List<MorningQuestionResponse.FamilyAnswerItem> familyAnswerItems = new ArrayList<>();
 
         for (MorningAnswer a : familyAnswerList) {
-            // TODO: a.getUserId()로 HealthProfileRepository 조회
 
-            Optional<HealthProfile> profileOpt = healthProfileRepository.findByUserId(a.getUserId());
-
-            // TODO: profile이 있으면 name/role 꺼내고, 없으면 기본값("알 수 없음", null)
+            Optional<User> answerUserOpt = userRepository.findById(a.getUserId());
 
             String name = "Unknown";
             String role = null;
 
-            if(profileOpt.isPresent()){
-                name = profileOpt.get().getName();
-                role = profileOpt.get().getRole().toString();
+            if(answerUserOpt.isPresent()){
+                name = answerUserOpt.get().getName();
+                role = answerUserOpt.get().getRole().toString();
             }
-
-            // TODO: FamilyAnswerItem.builder()로 조각 하나 만들어서 familyAnswerItems에 add
 
             MorningQuestionResponse.FamilyAnswerItem item = MorningQuestionResponse.FamilyAnswerItem.builder()
                     .userId(a.getUserId())

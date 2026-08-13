@@ -30,10 +30,6 @@ public class HealthProfile extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private UserRole role;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
     private Gender gender;
 
     @JdbcTypeCode(SqlTypes.JSON)
