@@ -2,6 +2,7 @@ package com.ondam.dailylog.controller;
 
 import com.ondam.global.common.ApiResponse;
 import com.ondam.dailylog.dto.response.DailyLogResponse;
+import com.ondam.dailylog.dto.response.DailyLogSummaryItem;
 import com.ondam.dailylog.service.DailyLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Tag(name = "일지", description = "매일의 아침/저녁 기록을 모아 보여주는 API")
 @RestController
@@ -32,5 +34,15 @@ public class DailyLogController {
             @PathVariable Long userId,
             @RequestParam LocalDate date) {
         return ApiResponse.success(dailyLogService.getDailyLog(userId, date));
+    }
+
+    @Operation(summary = "일지 기간 조회 (캘린더용)",
+            description = "지정한 기간(from~to) 동안의 날짜별 일지 완료 현황을 조회합니다. (완료 여부/개수만 반환)")
+    @GetMapping("/summary")
+    public ApiResponse<List<DailyLogSummaryItem>> getDailySummary(
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to,
+            @RequestParam Long userId) {
+        return ApiResponse.success(dailyLogService.getDailySummary(userId, from, to));
     }
 }
