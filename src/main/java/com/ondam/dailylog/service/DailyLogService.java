@@ -3,6 +3,7 @@ package com.ondam.dailylog.service;
 import com.ondam.dailylog.entity.DailyLog;
 import com.ondam.dailylog.repository.DailyLogRepository;
 import com.ondam.dailylog.dto.response.DailyLogResponse;
+import com.ondam.dailylog.dto.response.DailyLogSummaryItem;
 import com.ondam.question.entity.MorningQuestion;
 import com.ondam.question.entity.MorningAnswer;
 import com.ondam.question.entity.EveningQuestion;
@@ -158,5 +159,26 @@ public class DailyLogService {
                     .eveningAnswers(eveningAnswerItems)
                     .build();
         }
+    }
+
+    public List<DailyLogSummaryItem> getDailySummary(Long userId, LocalDate from, LocalDate to) {
+
+        // 1. dailyLogRepository로 범위 조회 → List<DailyLog>
+        List<DailyLog> bound = dailyLogRepository.findByUserIdAndLogDateBetween(userId, from, to);
+
+        List<DailyLogSummaryItem> result = new ArrayList<>();
+
+        for(DailyLog log : bound){
+            DailyLogSummaryItem item = DailyLogSummaryItem.builder()
+                    .logDate(log.getLogDate().toString())
+                    .morningAnswered(log.isMorningAnswered())
+                    .eveningCompletedCount(log.getEveningCompletedCount())
+                    .eveningTotalCount(log.getEveningTotalCount())
+                    .build();
+
+            result.add(item);
+        }
+
+        return result;
     }
 }
