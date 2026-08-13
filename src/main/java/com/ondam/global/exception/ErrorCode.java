@@ -13,7 +13,9 @@ public enum ErrorCode {
     ALREADY_ANSWERED(HttpStatus.CONFLICT, "이미 답변한 질문입니다."),
     QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "오늘의 질문이 아직 생성되지 않았습니다."),
     REPORT_NOT_READY(HttpStatus.BAD_REQUEST, "리포트 생성 조건이 충족되지 않았습니다."),
-    FAMILY_OWNER_CANNOT_LEAVE(HttpStatus.CONFLICT, "다른 가족 구성원이 남아 있어 가족 생성자는 나갈 수 없습니다.");
+    FAMILY_OWNER_CANNOT_LEAVE(HttpStatus.CONFLICT, "다른 가족 구성원이 남아 있어 가족 생성자는 나갈 수 없습니다."),
+    FORBIDDEN(HttpStatus.FORBIDDEN,"가족 구성원을 내보낼 권한이 없습니다."),
+    CANNOT_REMOVE_SELF(HttpStatus.BAD_REQUEST, "본인은 가족 나가기 API를 이용해주세요.");
     private final HttpStatus status;
     private final String message;
 }
