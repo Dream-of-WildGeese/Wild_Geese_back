@@ -2,6 +2,7 @@ package com.ondam.dailylog.service;
 
 import com.ondam.dailylog.entity.DailyLog;
 import com.ondam.dailylog.repository.DailyLogRepository;
+import com.ondam.dailylog.dto.response.DailyLogResponse;
 import com.ondam.question.entity.MorningQuestion;
 import com.ondam.question.entity.MorningAnswer;
 import com.ondam.question.entity.EveningQuestion;
@@ -17,6 +18,8 @@ import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.core.JacksonException;
 
 import java.time.LocalDate;
@@ -105,5 +108,55 @@ public class DailyLogService {
                 .build();
 
         dailyLogRepository.save(dailyLog);
+    }
+
+    public DailyLogResponse getDailyLog(Long userId, LocalDate date) {
+
+        // 1. dailyLogRepository로 그날의 DailyLog 조회 (없으면 어떻게 할지도 고민)
+        Optional<DailyLog> dailyLogOpt = dailyLogRepository.findByUserIdAndLogDate(userId, date);
+        if (dailyLogOpt.isEmpty()) {
+            DailyLogResponse response = DailyLogResponse.builder()
+                    .logDate(date.toString())
+                    .morningAnswer(null)
+                    .eveningAnswers(new ArrayList<>())
+                    .morningAnswered(false)
+                    .eveningCompletedCount(0)
+                    .eveningTotalCount(0)
+                    .build();
+
+            return response;
+        } else {
+            DailyLog dailyLog = dailyLogOpt.get();
+
+            String logDate = dailyLog.getLogDate().toString();
+            boolean morningAnswered = dailyLog.isMorningAnswered();
+            int eveningCompletedCount = dailyLog.getEveningCompletedCount();
+            int eveningTotalCount = dailyLog.getEveningTotalCount();
+
+            String morningAnswerJson = dailyLog.getMorningAnswer();
+            String eveningAnswersJson = dailyLog.getEveningAnswers();
+
+            DailyLogResponse.MorningAnswerItem morningAnswerItem;
+            List<DailyLogResponse.EveningAnswerItem> eveningAnswerItems;
+
+            try {
+                morningAnswerItem = morningAnswerJson != null
+                        ? objectMapper.readValue(morningAnswerJson, DailyLogResponse.MorningAnswerItem.class)
+                        : null;
+                eveningAnswerItems = objectMapper.readValue(eveningAnswersJson,
+                        new TypeReference<List<DailyLogResponse.EveningAnswerItem>>() {});
+            } catch (JacksonException e) {
+                throw new RuntimeException("DailyLog 파싱 실패", e);
+            }
+
+            return DailyLogResponse.builder()
+                    .logDate(logDate)
+                    .morningAnswered(morningAnswered)
+                    .eveningCompletedCount(eveningCompletedCount)
+                    .eveningTotalCount(eveningTotalCount)
+                    .morningAnswer(morningAnswerItem)
+                    .eveningAnswers(eveningAnswerItems)
+                    .build();
+        }
     }
 }
