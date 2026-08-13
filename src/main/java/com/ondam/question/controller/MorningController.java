@@ -2,6 +2,7 @@ package com.ondam.question.controller;
 
 import com.ondam.global.common.ApiResponse;
 import com.ondam.question.dto.response.MorningQuestionResponse;
+import com.ondam.question.dto.request.MorningAnswerRequest;
 import com.ondam.question.service.MorningQuestionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,5 +23,16 @@ public class MorningController {
     public ApiResponse<MorningQuestionResponse> getTodayQuestion(
             @RequestHeader("X-User-Id") Long userId) {
         return ApiResponse.success(morningQuestionService.getTodayQuestion(userId));
+    }
+
+    @Operation(summary = "오늘의 아침 질문 답변",
+            description = "가족 공통 질문에 대한 내 답변을 저장합니다.")
+    @PostMapping("/{questionId}/answers")
+    public ApiResponse<Void> submitAnswer(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long questionId,
+            @RequestBody MorningAnswerRequest request) {
+        morningQuestionService.submitAnswer(userId, questionId, request);
+        return ApiResponse.success(null);
     }
 }

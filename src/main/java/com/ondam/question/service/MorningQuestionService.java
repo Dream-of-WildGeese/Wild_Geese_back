@@ -6,6 +6,7 @@ import com.ondam.question.entity.MorningAnswer;
 import com.ondam.question.entity.InputType;
 import com.ondam.question.repository.MorningQuestionRepository;
 import com.ondam.question.repository.MorningAnswerRepository;
+import com.ondam.question.dto.request.MorningAnswerRequest;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import com.ondam.family.entity.Family;
@@ -16,7 +17,9 @@ import com.ondam.question.dto.response.MorningQuestionResponse;
 import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.repository.HealthProfileRepository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -114,5 +117,21 @@ public class MorningQuestionService {
                 .build();
 
         return morningQuestionRepository.save(question);
+    }
+
+    public void submitAnswer(Long userId, Long questionId, MorningAnswerRequest request) {
+
+        MorningQuestion question = morningQuestionRepository.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("질문이 존재하지 않습니다."));
+
+        MorningAnswer answer = MorningAnswer.builder()
+                .morningQuestionId(question.getId())
+                .userId(userId)
+                .textValue(request.textValue())
+                .inputType(request.inputType())
+                .answeredAt(LocalDateTime.now())
+                .build();
+
+        morningAnswerRepository.save(answer);
     }
 }
