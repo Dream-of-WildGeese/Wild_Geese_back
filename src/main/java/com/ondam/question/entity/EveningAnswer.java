@@ -4,14 +4,13 @@ import com.ondam.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "evening_answer")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class EveningAnswer {
+public class EveningAnswer extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

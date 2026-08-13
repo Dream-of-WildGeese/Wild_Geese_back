@@ -10,7 +10,6 @@ import com.ondam.question.repository.EveningQuestionRepository;
 import com.ondam.question.repository.QuestionTemplateRepository;
 import com.ondam.question.dto.response.EveningQuestionResponse;
 import com.ondam.question.dto.request.EveningAnswerSubmitRequest;
-import com.ondam.record.repository.HealthRecordRepository;
 import com.ondam.record.entity.HealthRecord;
 import com.ondam.record.entity.SourceType;
 import com.ondam.record.repository.HealthRecordRepository;
