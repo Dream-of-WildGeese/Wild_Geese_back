@@ -30,12 +30,17 @@ public class WeeklyReportService {
     private final HealthRecordRepository healthRecordRepository;
     private final ObjectMapper objectMapper;
 
-    public WeeklyReportResponse getWeeklyReport(Long userId) {
+    public WeeklyReportResponse getWeeklyReport(Long userId, LocalDate weekStartDate) {
 
         // 1. 이번 주 월요일~일요일 날짜 계산
-        LocalDate today = DateUtils.today();   // 우리가 만든 유틸 사용 (Asia/Seoul 기준)
+        LocalDate thisWeekStart;
+        if (weekStartDate != null) {
+            thisWeekStart = weekStartDate;
+        } else {
+            LocalDate today = DateUtils.today();
+            thisWeekStart = today.with(DayOfWeek.MONDAY);
+        }
 
-        LocalDate thisWeekStart = today.with(DayOfWeek.MONDAY);
         LocalDate thisWeekEnd = thisWeekStart.plusDays(6);
 
         // 2. 지난 주 월요일~일요일 날짜 계산
@@ -43,12 +48,6 @@ public class WeeklyReportService {
         LocalDate lastWeekEnd = lastWeekStart.plusDays(6);
 
         // 3. 5개 MetricType(CONDITION, SLEEP, MEAL, ACTIVITY, CUSTOM)마다 반복:
-        //    a. 이번주 평균 (findAverageValue)
-        //    b. 지난주 평균 (findAverageValue)
-        //    c. 이번주 일별 리스트 (findByUserIdAndMetricTypeAndRecordDateBetween)
-        //    d. diff, trend 계산
-        //    e. comment는 지금 고정 문구로 (나중에 AI)
-        //    f. Map에 담기
         Map<String, WeeklyReportResponse.MetricDetail> metrics = new HashMap<>();
         boolean isBaselineSufficient = false;
 
