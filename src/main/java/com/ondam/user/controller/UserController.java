@@ -65,4 +65,18 @@ public class UserController {
                 userService.getNotificationSetting(userId)
         );
     }
+
+    @Operation(
+            summary = "온보딩 완료",
+            description = "현재 사용자의 온보딩을 완료 상태로 변경합니다."
+    )
+    @PatchMapping("/me/onboarding/complete")
+    public ApiResponse<Void> completeOnboarding(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+
+        userService.completeOnboarding(userId);
+
+        return ApiResponse.success(null);
+    }
 }
