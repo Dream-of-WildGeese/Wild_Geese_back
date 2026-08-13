@@ -1,4 +1,8 @@
 package com.ondam.medication.repository;
 
-public class MedicationRepository {
+import com.ondam.medication.entity.Medication;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface MedicationRepository
+        extends JpaRepository<Medication, Long> {
 }
