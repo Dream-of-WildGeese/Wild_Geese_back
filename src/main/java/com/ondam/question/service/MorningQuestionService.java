@@ -7,10 +7,12 @@ import com.ondam.question.entity.InputType;
 import com.ondam.question.repository.MorningQuestionRepository;
 import com.ondam.question.repository.MorningAnswerRepository;
 import com.ondam.question.dto.request.MorningAnswerRequest;
+import com.ondam.question.dto.response.MorningQuestionHistoryItem;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import com.ondam.family.entity.Family;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.type.descriptor.jdbc.JdbcTypeFamilyInformation;
 import org.springframework.stereotype.Service;
 
 import com.ondam.question.dto.response.MorningQuestionResponse;
@@ -133,5 +135,35 @@ public class MorningQuestionService {
                 .build();
 
         morningAnswerRepository.save(answer);
+    }
+
+    public List<MorningQuestionHistoryItem> getMorningHistory(Long userId, LocalDate from, LocalDate to) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다."));
+
+        Family family = user.getFamily();
+        Long familyId = family.getId();
+
+        // 2. morningQuestionRepository로 범위 조회
+
+        List<MorningQuestion> questions = morningQuestionRepository
+                .findByFamilyIdAndQuestionDateBetween(familyId, from, to);
+
+        // 3. 각 MorningQuestion을 응답 형태로 변환해서 리스트로 반환
+
+        List<MorningQuestionHistoryItem> result = new ArrayList<>();
+
+        for (MorningQuestion q : questions) {
+
+            MorningQuestionHistoryItem item = MorningQuestionHistoryItem.builder()
+                    .questionId(q.getId())
+                    .questionDate(q.getQuestionDate().toString())
+                    .content(q.getContent())
+                    .build();
+
+            result.add(item);
+        }
+
+        return result;
     }
 }
