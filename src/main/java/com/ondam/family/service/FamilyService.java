@@ -169,4 +169,44 @@ public class FamilyService {
 
         user.leaveFamily();
     }
+
+    @Transactional
+    public void removeMember(
+            Long requesterId,
+            Long targetUserId
+    ) {
+
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        Family family = requester.getFamily();
+
+        if (family == null) {
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
+
+        if (!family.getCreatedBy().equals(requesterId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+
+        if (requesterId.equals(targetUserId)) {
+            throw new BusinessException(ErrorCode.CANNOT_REMOVE_SELF);
+        }
+
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        if (targetUser.getFamily() == null ||
+                !family.getId().equals(targetUser.getFamily().getId())) {
+
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
+
+        targetUser.leaveFamily();
+    }
 }
