@@ -19,6 +19,7 @@ public enum ErrorCode {
     CANNOT_JOIN_SELF(HttpStatus.BAD_REQUEST, "자신의 초대코드는 입력할 수 없습니다."),
     MEDICATION_NOT_FOUND(HttpStatus.BAD_REQUEST,"복용약을 찾을 수 없습니다."),
     MEDICATION_LOG_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 복약 기록이 존재합니다."),
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
     MEDICATION_SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "복약 일정을 찾을 수 없습니다.");
     private final HttpStatus status;
     private final String message;

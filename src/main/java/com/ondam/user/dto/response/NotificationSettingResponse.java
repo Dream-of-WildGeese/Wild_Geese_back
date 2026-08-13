@@ -10,6 +10,7 @@ public record NotificationSettingResponse(
         LocalTime eveningTime,
         boolean eveningEnabled,
         boolean reportEnabled,
-        DayOfWeek reportDayOfWeek
+        DayOfWeek reportDayOfWeek,
+        boolean medicationEnabled
 ) {
 }

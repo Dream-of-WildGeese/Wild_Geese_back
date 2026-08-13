@@ -122,7 +122,8 @@ public class UserService {
                 request.eveningTime(),
                 request.eveningEnabled(),
                 request.reportEnabled(),
-                request.reportDayOfWeek()
+                request.reportDayOfWeek(),
+                request.medicationEnabled()
         );
 
         NotificationSetting saved = notificationSettingRepository.save(setting);
@@ -134,7 +135,8 @@ public class UserService {
                 saved.getEveningTime(),
                 saved.isEveningEnabled(),
                 saved.isReportEnabled(),
-                saved.getReportDayOfWeek()
+                saved.getReportDayOfWeek(),
+                saved.isMedicationEnabled()
         );
     }
 
@@ -152,7 +154,19 @@ public class UserService {
                 setting.getEveningTime(),
                 setting.isEveningEnabled(),
                 setting.isReportEnabled(),
-                setting.getReportDayOfWeek()
+                setting.getReportDayOfWeek(),
+                setting.isMedicationEnabled()
         );
     }
+    @Transactional
+    public void completeOnboarding(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        user.completeOnboarding();
+    }
+
 }
