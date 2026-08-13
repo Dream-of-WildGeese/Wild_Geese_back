@@ -9,7 +9,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-/** local 프로필에서만 QUESTION_TEMPLATE 최소 시드 데이터를 채워 넣는다. */
 @Profile("local")
 @Component
 @RequiredArgsConstructor
@@ -23,46 +22,66 @@ public class QuestionTemplateSeeder implements CommandLineRunner {
             return;
         }
 
+        // CONDITION - 컨디션
         questionTemplateRepository.save(QuestionTemplate.builder()
                 .metricType(MetricType.CONDITION)
-                .content("오늘 컨디션은 어떠셨나요?")
+                .content("오늘 컨디션은 어땠나요?")
                 .answerType(AnswerType.CHOICE)
-                .choices("[{\"label\":\"매우 나쁨\",\"value\":1},{\"label\":\"나쁨\",\"value\":2},{\"label\":\"보통\",\"value\":3},{\"label\":\"좋음\",\"value\":4},{\"label\":\"매우 좋음\",\"value\":5}]")
+                .choices("""
+                        [{"label":"좋았어요","value":3},{"label":"보통이었어요","value":2},{"label":"좀 힘들었어요","value":1}]
+                        """)
                 .build());
 
+        // SLEEP - 수면
         questionTemplateRepository.save(QuestionTemplate.builder()
                 .metricType(MetricType.SLEEP)
-                .content("어젯밤 잠은 잘 주무셨나요?")
+                .content("오늘 수면은 어떠셨나요?")
                 .answerType(AnswerType.CHOICE)
-                .choices("[{\"label\":\"잘 못 잤음\",\"value\":1},{\"label\":\"보통\",\"value\":2},{\"label\":\"잘 잤음\",\"value\":3}]")
+                .choices("""
+                        [{"label":"푹 잤어요","value":3},{"label":"조금 부족했어요","value":2},{"label":"거의 못 잤어요","value":1}]
+                        """)
                 .build());
 
+        // MEAL - 식사
         questionTemplateRepository.save(QuestionTemplate.builder()
                 .metricType(MetricType.MEAL)
-                .content("오늘 식사는 잘 챙기셨나요?")
+                .content("오늘 식사는 어떠셨나요?")
                 .answerType(AnswerType.CHOICE)
-                .choices("[{\"label\":\"잘 못 챙김\",\"value\":1},{\"label\":\"보통\",\"value\":2},{\"label\":\"잘 챙김\",\"value\":3}]")
+                .choices("""
+                        [{"label":"잘 챙겼어요","value":3},{"label":"한두 끼 걸렀어요","value":2},{"label":"입맛이 없었어요","value":1}]
+                        """)
                 .build());
 
+        // ACTIVITY - 외출활동
         questionTemplateRepository.save(QuestionTemplate.builder()
                 .metricType(MetricType.ACTIVITY)
-                .content("오늘 활동량은 어느 정도였나요?")
+                .content("오늘 외출이나 활동은 어떠셨나요?")
                 .answerType(AnswerType.CHOICE)
-                .choices("[{\"label\":\"적음\",\"value\":1},{\"label\":\"보통\",\"value\":2},{\"label\":\"많음\",\"value\":3}]")
+                .choices("""
+                        [{"label":"가볍게 움직였어요","value":3},{"label":"집에서 쉬었어요","value":2},{"label":"거의 못 움직였어요","value":1}]
+                        """)
                 .build());
 
-        questionTemplateRepository.save(QuestionTemplate.builder()
-                .metricType(MetricType.BODY)
-                .content("특별히 불편하거나 아픈 곳이 있으셨나요?")
-                .answerType(AnswerType.TEXT)
-                .choices(null)
-                .build());
-
+        // BODY 역할 - 공통 몸상태 질문을 CUSTOM 타입의 "공통 폴백"으로 등록 (targetDisease=null)
         questionTemplateRepository.save(QuestionTemplate.builder()
                 .metricType(MetricType.CUSTOM)
-                .content("오늘 혈압을 측정하셨다면 수치를 알려주세요. (고혈압 관리)")
-                .answerType(AnswerType.TEXT)
-                .choices(null)
+                .content("오늘 몸 상태는 어떠셨나요?")
+                .answerType(AnswerType.CHOICE)
+                .choices("""
+                        [{"label":"괜찮았어요","value":3},{"label":"조금 불편했어요","value":2},{"label":"많이 불편했어요","value":1}]
+                        """)
+                .targetDisease(null)
+                .build());
+
+        // CUSTOM - 질환 맞춤 예시 (고혈압 전용)
+        questionTemplateRepository.save(QuestionTemplate.builder()
+                .metricType(MetricType.CUSTOM)
+                .content("오늘 짠 음식을 드셨나요?")
+                .answerType(AnswerType.CHOICE)
+                .choices("""
+                        [{"label":"많이 먹었어요","value":1},{"label":"보통이었어요","value":2},{"label":"싱겁게 먹었어요","value":3}]
+                        """)
+                .targetDisease("고혈압")
                 .build());
     }
 }
