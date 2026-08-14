@@ -7,3 +7,10 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
+
+aws:
+  s3:
+    bucket: ondam-storage
+    region: ap-northeast-2
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
