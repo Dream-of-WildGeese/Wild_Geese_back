@@ -1,6 +1,7 @@
 package com.ondam.medication.entity;
 
 import com.ondam.global.common.BaseTimeEntity;
+import com.ondam.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -44,14 +45,20 @@ public class MedicationLog extends BaseTimeEntity {
     @Column(nullable = false, length = 30)
     private MedicationLogStatus status;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     public MedicationLog(
             MedicationSchedule schedule,
+            User user,
             LocalDate recordDate,
             MedicationLogStatus status,
             LocalDateTime checkedAt,
             boolean isRetroactive
     ) {
         this.schedule = schedule;
+        this.user = user;
         this.recordDate = recordDate;
         this.status = status;
         this.checkedAt = checkedAt;
