@@ -7,6 +7,8 @@ import com.ondam.report.dto.response.WeeklyReportResponse;
 import com.ondam.question.entity.MetricType;
 import com.ondam.record.repository.HealthRecordRepository;
 import com.ondam.record.entity.HealthRecord;
+import com.ondam.medication.repository.MedicationLogRepository;
+import com.ondam.medication.entity.MedicationLogStatus;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
@@ -28,6 +30,7 @@ public class WeeklyReportService {
 
     private final WeeklyReportRepository weeklyReportRepository;
     private final HealthRecordRepository healthRecordRepository;
+    private final MedicationLogRepository medicationLogRepository;
     private final ObjectMapper objectMapper;
 
     public WeeklyReportResponse getWeeklyReport(Long userId, LocalDate weekStartDate) {
@@ -147,6 +150,18 @@ public class WeeklyReportService {
 
         weeklyReportRepository.save(weeklyReport);
 
+        long takenCount = medicationLogRepository.countByUserIdAndStatusAndRecordDateBetween(
+                userId, MedicationLogStatus.TAKEN, thisWeekStart, thisWeekEnd);
+
+        long totalCount = medicationLogRepository.countByUserIdAndStatusAndRecordDateBetween(
+                userId, MedicationLogStatus.NOT_RECORDED, thisWeekStart, thisWeekEnd) + takenCount;
+
+        WeeklyReportResponse.MedicationSummary medicationSummary = WeeklyReportResponse.MedicationSummary.builder()
+                .takenCount(takenCount)
+                .totalCount(totalCount)
+                .comment("이번 주 " + totalCount + "번 중 " + takenCount + "번 챙기셨어요.")
+                .build();
+
         // 6. DTO 조립
         return WeeklyReportResponse.builder()
                 .weekStartDate(thisWeekStart.toString())
@@ -154,6 +169,7 @@ public class WeeklyReportService {
                 .isBaselineSufficient(isBaselineSufficient)
                 .weeklyComment(weeklyComment)
                 .metrics(metrics)
+                .medication(medicationSummary)
                 .nextWeekSuggestion(nextWeekSuggestion)
                 .build();
     }

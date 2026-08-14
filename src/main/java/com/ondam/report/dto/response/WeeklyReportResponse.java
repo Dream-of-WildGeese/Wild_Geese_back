@@ -12,6 +12,7 @@ public record WeeklyReportResponse(
         boolean isBaselineSufficient,
         String weeklyComment,
         Map<String, MetricDetail> metrics,
+        MedicationSummary medication,   // ← 추가
         String nextWeekSuggestion
 ) {
     @Builder
@@ -22,5 +23,12 @@ public record WeeklyReportResponse(
             String trend,
             List<Double> daily,
             String comment
+    ) {}
+
+    @Builder
+    public record MedicationSummary(   // ← 추가
+           long takenCount,
+           long totalCount,
+           String comment
     ) {}
 }
