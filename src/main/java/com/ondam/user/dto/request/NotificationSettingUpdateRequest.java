@@ -10,5 +10,6 @@ public record NotificationSettingUpdateRequest(LocalTime morningTime,
                                                boolean eveningEnabled,
                                                boolean reportEnabled,
                                                DayOfWeek reportDayOfWeek,
-                                               boolean medicationEnabled) {
+                                               boolean medicationEnabled,
+                                               boolean familyReactionEnabled) {
 }
