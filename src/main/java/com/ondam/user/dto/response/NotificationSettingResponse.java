@@ -11,6 +11,7 @@ public record NotificationSettingResponse(
         boolean eveningEnabled,
         boolean reportEnabled,
         DayOfWeek reportDayOfWeek,
-        boolean medicationEnabled
+        boolean medicationEnabled,
+        boolean familyReactionEnabled
 ) {
 }

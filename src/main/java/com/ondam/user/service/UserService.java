@@ -4,15 +4,18 @@ import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
 import com.ondam.user.dto.request.HealthProfileUpdateRequest;
 import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
+import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
 import com.ondam.user.dto.request.UserCreateRequest;
 import com.ondam.user.dto.response.HealthProfileResponse;
 import com.ondam.user.dto.response.NotificationSettingResponse;
 import com.ondam.user.dto.response.UserCreateResponse;
 import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.entity.NotificationSetting;
+import com.ondam.user.entity.PushSubscription;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.HealthProfileRepository;
 import com.ondam.user.repository.NotificationSettingRepository;
+import com.ondam.user.repository.PushSubscriptionRepository;
 import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final HealthProfileRepository healthProfileRepository;
     private final NotificationSettingRepository notificationSettingRepository;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
 
     @Transactional
     public UserCreateResponse createUser(UserCreateRequest request) {
@@ -123,7 +127,8 @@ public class UserService {
                 request.eveningEnabled(),
                 request.reportEnabled(),
                 request.reportDayOfWeek(),
-                request.medicationEnabled()
+                request.medicationEnabled(),
+                request.familyReactionEnabled()
         );
 
         NotificationSetting saved = notificationSettingRepository.save(setting);
@@ -136,7 +141,8 @@ public class UserService {
                 saved.isEveningEnabled(),
                 saved.isReportEnabled(),
                 saved.getReportDayOfWeek(),
-                saved.isMedicationEnabled()
+                saved.isMedicationEnabled(),
+                saved.isFamilyReactionEnabled()
         );
     }
 
@@ -155,7 +161,8 @@ public class UserService {
                 setting.isEveningEnabled(),
                 setting.isReportEnabled(),
                 setting.getReportDayOfWeek(),
-                setting.isMedicationEnabled()
+                setting.isMedicationEnabled(),
+                setting.isFamilyReactionEnabled()
         );
     }
     @Transactional
@@ -167,6 +174,28 @@ public class UserService {
                 );
 
         user.completeOnboarding();
+    }
+
+    @Transactional
+    public void createPushSubscription(
+            Long userId,
+            PushSubscriptionCreateRequest request
+    ) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        PushSubscription subscription =
+                new PushSubscription(
+                        user,
+                        request.endpoint(),
+                        request.p256dh(),
+                        request.auth()
+                );
+
+        pushSubscriptionRepository.save(subscription);
     }
 
 }

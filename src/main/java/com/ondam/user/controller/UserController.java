@@ -3,6 +3,7 @@ package com.ondam.user.controller;
 import com.ondam.global.common.ApiResponse;
 import com.ondam.user.dto.request.HealthProfileUpdateRequest;
 import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
+import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
 import com.ondam.user.dto.request.UserCreateRequest;
 import com.ondam.user.dto.response.HealthProfileResponse;
 import com.ondam.user.dto.response.NotificationSettingResponse;
@@ -76,6 +77,25 @@ public class UserController {
     ) {
 
         userService.completeOnboarding(userId);
+
+        return ApiResponse.success(null);
+    }
+
+    @Operation(
+            summary = "푸시 알림 구독 등록",
+            description = "현재 사용자의 브라우저 푸시 알림 구독 정보를 등록합니다."
+    )
+    @PostMapping("/me/pushsubscriptions")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<Void> createPushSubscription(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody @Valid PushSubscriptionCreateRequest request
+    ) {
+
+        userService.createPushSubscription(
+                userId,
+                request
+        );
 
         return ApiResponse.success(null);
     }
