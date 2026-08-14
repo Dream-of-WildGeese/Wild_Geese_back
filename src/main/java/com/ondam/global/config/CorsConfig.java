@@ -11,9 +11,9 @@ public class CorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins(
-                        "<http://localhost:3000>",
-                        "<http://localhost:5173>",
-                        "<https://배포된-프론트-주소>"     // 정해지면 즉시 추가
+                        "http://localhost:3000",
+                        "http://localhost:5173",
+                        "https://wild-geese-front.vercel.app"
                 )
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
