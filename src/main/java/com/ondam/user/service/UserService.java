@@ -127,7 +127,8 @@ public class UserService {
                 request.eveningEnabled(),
                 request.reportEnabled(),
                 request.reportDayOfWeek(),
-                request.medicationEnabled()
+                request.medicationEnabled(),
+                request.familyReactionEnabled()
         );
 
         NotificationSetting saved = notificationSettingRepository.save(setting);
@@ -140,7 +141,8 @@ public class UserService {
                 saved.isEveningEnabled(),
                 saved.isReportEnabled(),
                 saved.getReportDayOfWeek(),
-                saved.isMedicationEnabled()
+                saved.isMedicationEnabled(),
+                saved.isFamilyReactionEnabled()
         );
     }
 
@@ -159,7 +161,8 @@ public class UserService {
                 setting.isEveningEnabled(),
                 setting.isReportEnabled(),
                 setting.getReportDayOfWeek(),
-                setting.isMedicationEnabled()
+                setting.isMedicationEnabled(),
+                setting.isFamilyReactionEnabled()
         );
     }
     @Transactional
