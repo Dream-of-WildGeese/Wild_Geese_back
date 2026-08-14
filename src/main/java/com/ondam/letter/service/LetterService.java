@@ -7,6 +7,8 @@ import com.ondam.letter.dto.response.LetterResponse;
 import com.ondam.question.entity.InputType;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
+import com.ondam.global.util.S3Uploader;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +23,7 @@ public class LetterService {
 
     private final LetterRepository letterRepository;
     private final UserRepository userRepository;
+    private final S3Uploader s3Uploader;
 
     public void sendLetter(Long fromUserId, LetterSendRequest request) {
 
@@ -136,8 +139,7 @@ public class LetterService {
 
     public void sendVoiceLetter(Long fromUserId, Long toUserId, MultipartFile audioFile) {
 
-        // TODO: 실제 파일 저장소(S3 등) 연동 필요. 지금은 고정 URL로 스텁 처리.
-        String audioUrl = "https://example.com/letters/stub.webm";
+        String audioUrl = s3Uploader.upload(audioFile, "letters");
 
         // TODO: STT로 content도 채울 수 있으면 좋지만, 지금은 생략(비워둠)
         Letter letter = Letter.builder()
