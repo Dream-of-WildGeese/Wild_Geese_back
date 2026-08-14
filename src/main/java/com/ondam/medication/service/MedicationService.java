@@ -337,6 +337,7 @@ public class MedicationService {
         // 6. 로그 생성
         MedicationLog log = new MedicationLog(
                 schedule,
+                user,
                 request.recordDate(),
                 request.status(),
                 LocalDateTime.now(ZoneId.of("Asia/Seoul")),
@@ -410,6 +411,7 @@ public class MedicationService {
 
                     MedicationLog log = new MedicationLog(
                             schedule,
+                            user,
                             request.recordDate(),
                             MedicationLogStatus.TAKEN,
                             now,
