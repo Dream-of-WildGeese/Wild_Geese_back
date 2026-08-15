@@ -265,7 +265,7 @@ public class WeeklyReportService {
             // 실패 시 기본 문구로 폴백
             Map<String, String> fallback = new HashMap<>();
             fallback.put("weeklyComment", "이번 주 건강 기록을 확인해보세요.");
-            fallback.put("weeklyDetail", "이번 주 건강 흐름을 확인해보세요.");   // ← 추가
+            fallback.put("weeklyDetail", "이번 주 건강 흐름을 확인해보세요.");
             fallback.put("nextWeekSuggestion", "다음 주에도 꾸준히 기록해보시는 건 어때요?");
             fallback.put("customComment", "이번 주 질환 관련 답변을 확인했어요.");
             return fallback;
