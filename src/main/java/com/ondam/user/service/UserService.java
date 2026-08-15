@@ -6,10 +6,7 @@ import com.ondam.user.dto.request.HealthProfileUpdateRequest;
 import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
 import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
 import com.ondam.user.dto.request.UserCreateRequest;
-import com.ondam.user.dto.response.HealthProfileResponse;
-import com.ondam.user.dto.response.InviteCodeResponse;
-import com.ondam.user.dto.response.NotificationSettingResponse;
-import com.ondam.user.dto.response.UserCreateResponse;
+import com.ondam.user.dto.response.*;
 import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.entity.NotificationSetting;
 import com.ondam.user.entity.PushSubscription;
@@ -209,6 +206,47 @@ public class UserService {
 
         return new InviteCodeResponse(
                 user.getInviteCode()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public UserNameResponse getMyInfo(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        return new UserNameResponse(
+                user.getId(),
+                user.getName()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public HealthProfileResponse getHealthProfile(Long userId) {
+
+        // 사용자 존재 여부 확인
+        userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 해당 사용자의 건강프로필 조회
+        HealthProfile healthProfile =
+                healthProfileRepository.findByUserId(userId)
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.HEALTH_PROFILE_NOT_FOUND
+                                )
+                        );
+
+        return new HealthProfileResponse(
+                healthProfile.getId(),
+                healthProfile.getBirthDate(),
+                healthProfile.getGender(),
+                healthProfile.getDiseases(),
+                healthProfile.getWellnessInterests()
         );
     }
 
