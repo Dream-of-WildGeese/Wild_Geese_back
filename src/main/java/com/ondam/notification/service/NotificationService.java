@@ -5,6 +5,9 @@ import com.ondam.global.exception.ErrorCode;
 import com.ondam.notification.dto.response.NotificationResponse;
 import com.ondam.notification.entity.Notification;
 import com.ondam.notification.repository.NotificationRepository;
+import com.ondam.user.dto.response.HealthProfileResponse;
+import com.ondam.user.entity.HealthProfile;
+import com.ondam.user.repository.HealthProfileRepository;
 import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +23,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final HealthProfileRepository healthProfileRepository;
 
     public Page<NotificationResponse> getNotifications(
             Long userId,
@@ -73,5 +77,6 @@ public class NotificationService {
 
         notification.markAsRead();
     }
+
 }
 

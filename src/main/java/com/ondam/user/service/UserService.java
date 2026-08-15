@@ -6,10 +6,7 @@ import com.ondam.user.dto.request.HealthProfileUpdateRequest;
 import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
 import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
 import com.ondam.user.dto.request.UserCreateRequest;
-import com.ondam.user.dto.response.HealthProfileResponse;
-import com.ondam.user.dto.response.InviteCodeResponse;
-import com.ondam.user.dto.response.NotificationSettingResponse;
-import com.ondam.user.dto.response.UserCreateResponse;
+import com.ondam.user.dto.response.*;
 import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.entity.NotificationSetting;
 import com.ondam.user.entity.PushSubscription;
@@ -209,6 +206,20 @@ public class UserService {
 
         return new InviteCodeResponse(
                 user.getInviteCode()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public UserNameResponse getMyInfo(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        return new UserNameResponse(
+                user.getId(),
+                user.getName()
         );
     }
 
