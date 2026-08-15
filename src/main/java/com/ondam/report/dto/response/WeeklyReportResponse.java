@@ -11,6 +11,7 @@ public record WeeklyReportResponse(
         String weekEndDate,
         boolean isBaselineSufficient,
         String weeklyComment,
+        String weeklyDetail,   // ← 이 필드 추가하셨나요?
         Map<String, MetricDetail> metrics,
         MedicationSummary medication,
         String customComment,

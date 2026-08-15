@@ -195,6 +195,7 @@ public class WeeklyReportService {
                 .weekEndDate(thisWeekEnd.toString())
                 .isBaselineSufficient(isBaselineSufficient)
                 .weeklyComment(weeklyComment)
+                .weeklyDetail(aiComments.getOrDefault("weeklyDetail", "이번 주 건강 흐름을 확인해보세요."))
                 .metrics(finalMetrics)
                 .medication(medicationSummary)
                 .customComment(customComment)
@@ -224,24 +225,34 @@ public class WeeklyReportService {
             String customDesc = customTexts.isEmpty() ? "없음" : String.join(" / ", customTexts);
 
             String prompt = String.format("""
-                당신은 어르신 건강 관리 앱의 리포트 작성자입니다.
-                다음은 이번 주 건강 데이터입니다:
-                %s
-                질환 관련 답변: %s
-                
-                아래 JSON 형식으로만 답변하세요. 다른 설명 없이 JSON만 출력하세요.
-                {
-                  "weeklyComment": "이번 주 전체를 한 줄로 요약한 따뜻한 문장",
-                  "conditionComment": "컨디션 지표에 대한 한 줄 코멘트",
-                  "sleepComment": "수면 지표에 대한 한 줄 코멘트",
-                  "mealComment": "식사 지표에 대한 한 줄 코멘트",
-                  "activityComment": "활동 지표에 대한 한 줄 코멘트",
-                  "customComment": "질환 관련 답변을 요약한 한 줄 코멘트",
-                  "nextWeekSuggestion": "다음 주를 위한 부드러운 제안 한 문장"
-                }
-                
-                부정적인 진단이나 인과관계 추측은 하지 마세요.
-                """, metricsDesc, customDesc);
+            당신은 어르신 건강 관리 앱의 리포트 작성자입니다.
+            이 리포트는 어르신 본인과 그 자녀가 함께 봅니다.
+    
+            이번 주 건강 데이터:
+            %s
+    
+            지병 관련 답변: %s
+    
+            아래 JSON 형식으로만 답변하세요. 다른 설명 없이 JSON만 출력하세요.
+            {
+              "weeklyComment": "이번 주 전체 흐름을 요약하는 짧은 제목 (예: '이번 주는 활동량이 줄었어요', '컨디션이 안 좋은 날들이 반복됐어요')",
+              "weeklyDetail": "weeklyComment를 뒷받침하는 두 문장. 여러 지표를 연결해서 설명하고(예: '수요일부터 걸음 수와 컨디션이 함께 처지는 모습이 보였어요'), 잘 지킨 부분이 있으면 짧게 격려하세요(예: '복약은 꾸준히 잘 챙기셨으니'). 마지막 문장은 다음 주 제안이나 안부를 건네는 부드러운 문장으로 마무리하세요.",
+              "conditionComment": "컨디션 지표 한 줄 코멘트. 구체적인 요일을 언급하세요",
+              "sleepComment": "수면 지표 한 줄 코멘트",
+              "mealComment": "식사 지표 한 줄 코멘트",
+              "activityComment": "활동 지표 한 줄 코멘트. 걸음수 변화가 있으면 '평소보다 하루 평균 ~만큼' 형태로 구체적 수치를 언급하세요",
+              "customComment": "지병 관련 답변을 요약한 한 줄 코멘트",
+              "nextWeekSuggestion": "다음 주를 위한 부드러운 제안 한 문장. 명령이 아니라 제안하는 어투로"
+            }
+    
+            문체 규칙:
+            - 모든 문장은 존댓말로, 부드럽고 다정한 어투로 작성하세요.
+            - weeklyComment는 15자 내외의 짧은 제목, weeklyDetail은 두 문장 이내로 작성하세요.
+            - 나머지 코멘트는 각각 40자를 넘기지 마세요.
+            - "~것 같아요", "~해 보이네요" 같은 추측 표현 대신, 데이터에 기반한 사실만 말하세요.
+            - 절대로 의학적 진단을 내리거나, "때문에" 같은 인과관계를 단정짓지 마세요.
+            - 나쁜 수치가 있어도 걱정을 유발하지 말고, 담담하고 따뜻하게 전달하세요.
+            """, metricsDesc, customDesc);
 
             String response = gptClient.ask(prompt);
 
@@ -254,6 +265,7 @@ public class WeeklyReportService {
             // 실패 시 기본 문구로 폴백
             Map<String, String> fallback = new HashMap<>();
             fallback.put("weeklyComment", "이번 주 건강 기록을 확인해보세요.");
+            fallback.put("weeklyDetail", "이번 주 건강 흐름을 확인해보세요.");   // ← 추가
             fallback.put("nextWeekSuggestion", "다음 주에도 꾸준히 기록해보시는 건 어때요?");
             fallback.put("customComment", "이번 주 질환 관련 답변을 확인했어요.");
             return fallback;

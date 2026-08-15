@@ -18,6 +18,7 @@ import com.ondam.record.entity.SourceType;
 import com.ondam.record.repository.HealthRecordRepository;
 import com.ondam.user.repository.HealthProfileRepository;
 import com.ondam.user.entity.HealthProfile;
+import com.ondam.user.entity.WellnessInterest;
 import com.ondam.dailylog.service.DailyLogService;
 
 import tools.jackson.databind.ObjectMapper;
@@ -38,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -278,26 +280,67 @@ public class EveningQuestionService {
         try {
             Optional<HealthProfile> profileOpt = healthProfileRepository.findByUserId(userId);
 
-            String disease = "특별한 질환 없음";
-            if (profileOpt.isPresent() && profileOpt.get().getDiseases() != null
+            String topic;         // 프롬프트에 넣을 실제 주제
+            String topicType;     // "지병"인지 "관심사"인지 GPT에게 알려주기 위한 구분
+
+            if (profileOpt.isPresent()
+                    && profileOpt.get().getDiseases() != null
                     && !profileOpt.get().getDiseases().isEmpty()) {
-                disease = String.join(", ", profileOpt.get().getDiseases());
+                // 지병이 있으면 무조건 지병 우선
+                topic = String.join(", ", profileOpt.get().getDiseases());
+                topicType = "지병";
+
+            } else if (profileOpt.isPresent()
+                    && profileOpt.get().getWellnessInterests() != null
+                    && !profileOpt.get().getWellnessInterests().isEmpty()) {
+                // 지병이 없으면 관심사 사용
+                topic = profileOpt.get().getWellnessInterests().stream()
+                        .map(this::translateWellnessInterest)
+                        .collect(Collectors.joining(", "));
+                topicType = "관심사";
+
+            } else {
+                // 둘 다 없으면 일반 질문
+                topic = "특별한 지병이나 관심사 없음";
+                topicType = "없음";
             }
 
-            String prompt = String.format(
-                    "당신은 어르신을 위한 건강 체크 앱의 질문 작성자입니다. " +
-                    "이 사용자의 질환은 '%s'입니다. " +
-                    "이 질환과 관련해서, 오늘 하루를 돌아보는 따뜻하고 부담 없는 건강 체크 질문을 " +
-                    "한 문장으로만 작성해주세요. 질문 외의 다른 말은 하지 마세요.",
-                    disease
-            );
+            String prompt = String.format("""
+                당신은 어르신을 위한 건강 체크 앱의 질문 작성자입니다.
+
+                다음 순서로 작업해주세요.
+
+                1단계: 이 사용자의 %s는 '%s'입니다. 이것을 관리하거나 챙길 때 일상에서 특히 신경 써야 할 부분이 무엇인지 생각해보세요.
+
+                2단계: 1단계에서 찾은 정보를 바탕으로, 다음 두 가지 중 하나의 방향으로 질문을 만드세요.
+                - 방향 A: 이와 관련된 증상이나 변화가 오늘 있었는지 확인하는 질문
+                - 방향 B: 관리나 개선에 도움되는 특정 행동을 오늘 실천했는지 확인하는 질문
+                두 방향 중 더 적합한 쪽을 하나만 골라서 질문을 만드세요.
+
+                3단계: 그 질문을 따뜻하고 부담 없는 말투로, 한 문장으로만 다듬어서 최종 작성하세요.
+
+                최종 결과 형식:
+                - "오늘 ~하셨나요?" 형태의 사실 확인 질문으로 작성하세요. (예: "오늘 짠 음식을 얼마나 드셨는지 편하게 말씀해주세요.")
+                - "괜찮으세요?", "걱정되지 않으세요?" 같은 감정을 묻는 질문은 피하세요.
+                - 여러 개면, 그중 가장 중요한 것 하나만 골라서 질문하세요.
+                - 최종 질문 문장 하나만 출력하고, 1~3단계 과정이나 다른 설명은 절대 출력하지 마세요.
+                """, topicType, topic);
 
             return gptClient.ask(prompt).trim();
 
         } catch (Exception e) {
-            // GPT 호출 실패 시 기존 폴백 템플릿으로
             QuestionTemplate fallback = pickCustomTemplate(userId, MetricType.CUSTOM);
             return fallback.getContent();
         }
+    }
+
+    private String translateWellnessInterest(WellnessInterest interest) {
+        return switch (interest) {
+            case SLEEP -> "수면";
+            case ACTIVITY -> "활동량";
+            case MEAL -> "식사";
+            case MEDICINE -> "복약 관리";
+            case MOOD -> "기분/정서";
+        };
     }
 }
