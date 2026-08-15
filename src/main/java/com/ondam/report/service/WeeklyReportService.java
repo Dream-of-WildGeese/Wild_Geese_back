@@ -1,6 +1,7 @@
 package com.ondam.report.service;
 
 import com.ondam.global.common.DateUtils;
+import com.ondam.global.util.GptClient;
 import com.ondam.report.entity.WeeklyReport;
 import com.ondam.report.repository.WeeklyReportRepository;
 import com.ondam.report.dto.response.WeeklyReportResponse;
@@ -14,6 +15,7 @@ import com.ondam.question.entity.EveningAnswer;
 import com.ondam.question.repository.EveningQuestionRepository;
 import com.ondam.question.repository.EveningAnswerRepository;
 
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class WeeklyReportService {
     private final EveningQuestionRepository eveningQuestionRepository;
     private final EveningAnswerRepository eveningAnswerRepository;
     private final ObjectMapper objectMapper;
+    private final GptClient gptClient;
 
     public WeeklyReportResponse getWeeklyReport(Long userId, LocalDate weekStartDate) {
 
@@ -92,18 +95,6 @@ public class WeeklyReportService {
                 }
             }
 
-            // e. comment (고정 문구, 다음 단계에서)
-            String comment;
-            if (trend.equals("DECREASE")) {
-                comment = "지난주보다 조금 낮아졌어요.";
-            } else if (trend.equals("INCREASE")) {
-                comment = "지난주보다 나아졌어요.";
-            } else if (trend.equals("SAME")) {
-                comment = "지난주와 비슷했어요.";
-            } else {
-                comment = "비교할 데이터가 부족해요.";
-            }
-
             // f. Map에 담기
             List<Double> dailyValues = new ArrayList<>();
             for (HealthRecord r : thisWeekRecords) {
@@ -118,7 +109,7 @@ public class WeeklyReportService {
                     .diff(diff)
                     .trend(trend)
                     .daily(dailyValues)
-                    .comment(comment)
+                    .comment(null)
                     .build();
 
             metrics.put(type.toString(), detail);
@@ -128,8 +119,9 @@ public class WeeklyReportService {
         List<EveningQuestion> customQuestions = eveningQuestionRepository
                 .findByUserIdAndMetricTypeAndQuestionDateBetween(
                         userId, MetricType.CUSTOM, thisWeekStart, thisWeekEnd);
-
         List<String> customTexts = new ArrayList<>();
+
+        Map<String, String> aiComments = generateAllComments(metrics, customTexts);
 
         for (EveningQuestion cq : customQuestions) {
             Optional<EveningAnswer> answerOpt = eveningAnswerRepository
@@ -139,22 +131,26 @@ public class WeeklyReportService {
             }
         }
 
-        // TODO: 실제로는 이 customTexts를 GPT에게 넘겨서 코멘트 생성 요청
-        // 지금은 임시로 답변 존재 여부만으로 스텁 문구 생성
-        String customComment;
-        if (customTexts.isEmpty()) {
-            customComment = "이번 주 질환 관련 답변이 아직 없어요.";
-        } else {
-            customComment = "이번 주 질환 관련 답변을 " + customTexts.size() + "번 남겨주셨어요.";
+        Map<String, WeeklyReportResponse.MetricDetail> finalMetrics = new HashMap<>();
+        for (Map.Entry<String, WeeklyReportResponse.MetricDetail> entry : metrics.entrySet()) {
+            WeeklyReportResponse.MetricDetail old = entry.getValue();
+            String commentKey = entry.getKey().toLowerCase() + "Comment";  // 예: "conditionComment"
+
+            WeeklyReportResponse.MetricDetail updated = WeeklyReportResponse.MetricDetail.builder()
+                    .current(old.current())
+                    .previous(old.previous())
+                    .diff(old.diff())
+                    .trend(old.trend())
+                    .daily(old.daily())
+                    .comment(aiComments.getOrDefault(commentKey, "데이터를 확인해보세요."))
+                    .build();
+
+            finalMetrics.put(entry.getKey(), updated);
         }
 
-        // 5. weeklyComment, nextWeekSuggestion도 고정 문구로
-        String weeklyComment = isBaselineSufficient
-                ? "이번 주 건강 기록을 확인해보세요."
-                : "비교할 지난주 기록이 부족해요.";
-
-        String nextWeekSuggestion = "다음 주에도 꾸준히 기록해보시는 건 어때요?";
-        // AI연동 필요
+        String weeklyComment = aiComments.getOrDefault("weeklyComment", "이번 주 건강 기록을 확인해보세요.");
+        String nextWeekSuggestion = aiComments.getOrDefault("nextWeekSuggestion", "다음 주에도 꾸준히 기록해보시는 건 어때요?");
+        String customComment = aiComments.getOrDefault("customComment", "이번 주 질환 관련 답변을 확인했어요.");
 
         // metrics를 JSON 문자열로 변환
         String metricsJson;
@@ -199,10 +195,68 @@ public class WeeklyReportService {
                 .weekEndDate(thisWeekEnd.toString())
                 .isBaselineSufficient(isBaselineSufficient)
                 .weeklyComment(weeklyComment)
-                .metrics(metrics)
+                .metrics(finalMetrics)
                 .medication(medicationSummary)
                 .customComment(customComment)
                 .nextWeekSuggestion(nextWeekSuggestion)
                 .build();
+    }
+
+    private String buildMetricsDescription(Map<String, WeeklyReportResponse.MetricDetail> metrics) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, WeeklyReportResponse.MetricDetail> entry : metrics.entrySet()) {
+            WeeklyReportResponse.MetricDetail detail = entry.getValue();
+            sb.append(entry.getKey())
+                    .append(": 이번주 ").append(detail.current())
+                    .append(", 지난주 ").append(detail.previous())
+                    .append(", 추세 ").append(detail.trend())
+                    .append("\n");
+        }
+        return sb.toString();
+    }
+
+    private Map<String, String> generateAllComments(
+            Map<String, WeeklyReportResponse.MetricDetail> metrics,
+            List<String> customTexts) {
+
+        try {
+            String metricsDesc = buildMetricsDescription(metrics);
+            String customDesc = customTexts.isEmpty() ? "없음" : String.join(" / ", customTexts);
+
+            String prompt = String.format("""
+                당신은 어르신 건강 관리 앱의 리포트 작성자입니다.
+                다음은 이번 주 건강 데이터입니다:
+                %s
+                질환 관련 답변: %s
+                
+                아래 JSON 형식으로만 답변하세요. 다른 설명 없이 JSON만 출력하세요.
+                {
+                  "weeklyComment": "이번 주 전체를 한 줄로 요약한 따뜻한 문장",
+                  "conditionComment": "컨디션 지표에 대한 한 줄 코멘트",
+                  "sleepComment": "수면 지표에 대한 한 줄 코멘트",
+                  "mealComment": "식사 지표에 대한 한 줄 코멘트",
+                  "activityComment": "활동 지표에 대한 한 줄 코멘트",
+                  "customComment": "질환 관련 답변을 요약한 한 줄 코멘트",
+                  "nextWeekSuggestion": "다음 주를 위한 부드러운 제안 한 문장"
+                }
+                
+                부정적인 진단이나 인과관계 추측은 하지 마세요.
+                """, metricsDesc, customDesc);
+
+            String response = gptClient.ask(prompt);
+
+            // GPT가 가끔 ```json ... ``` 코드블럭으로 감싸서 응답하는 경우 제거
+            String cleaned = response.replaceAll("```json", "").replaceAll("```", "").trim();
+
+            return objectMapper.readValue(cleaned, new TypeReference<Map<String, String>>() {});
+
+        } catch (Exception e) {
+            // 실패 시 기본 문구로 폴백
+            Map<String, String> fallback = new HashMap<>();
+            fallback.put("weeklyComment", "이번 주 건강 기록을 확인해보세요.");
+            fallback.put("nextWeekSuggestion", "다음 주에도 꾸준히 기록해보시는 건 어때요?");
+            fallback.put("customComment", "이번 주 질환 관련 답변을 확인했어요.");
+            return fallback;
+        }
     }
 }

@@ -1,10 +1,12 @@
 package com.ondam.question.service;
 
 import com.ondam.global.common.DateUtils;
+import com.ondam.global.util.GptClient;
 import com.ondam.question.entity.EveningQuestion;
 import com.ondam.question.entity.EveningAnswer;
 import com.ondam.question.entity.MetricType;
 import com.ondam.question.entity.QuestionTemplate;
+import com.ondam.question.entity.AnswerType;
 import com.ondam.question.repository.EveningAnswerRepository;
 import com.ondam.question.repository.EveningQuestionRepository;
 import com.ondam.question.repository.QuestionTemplateRepository;
@@ -25,6 +27,11 @@ import tools.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.MediaType;
+
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -46,14 +54,16 @@ public class EveningQuestionService {
     private final HealthProfileRepository healthProfileRepository;
 
     private final DailyLogService dailyLogService;
+    private final WebClient openAiWebClient;
+    private final GptClient gptClient;
 
-    public EveningQuestionResponse getTodayQuestions(Long userId){
+    public EveningQuestionResponse getTodayQuestions(Long userId) {
 
         LocalDate today = DateUtils.today();
 
         List<EveningQuestion> questions = eveningQuestionRepository.findByUserIdAndQuestionDate(userId, today);
 
-        if (questions.isEmpty()){
+        if (questions.isEmpty()) {
             questions = generateTodayQuestions(userId, today);
         }
 
@@ -124,24 +134,36 @@ public class EveningQuestionService {
 
         for (MetricType type : types) {
 
-            QuestionTemplate template;
+            EveningQuestion question;
 
-            if(type == MetricType.CUSTOM){
-                template = pickCustomTemplate(userId, type);   // 새로 만들 메서드
-            } else{
+            if (type == MetricType.CUSTOM) {
+                // GPT로 질문 생성 (실패하면 기존 폴백 템플릿 사용)
+                String customContent = generateCustomQuestionByAi(userId);
+
+                question = EveningQuestion.builder()
+                        .templateId(null)               // GPT 생성이라 원본 템플릿 없음
+                        .userId(userId)
+                        .questionDate(today)
+                        .metricType(type)
+                        .content(customContent)
+                        .answerType(AnswerType.TEXT)
+                        .choices(null)
+                        .build();
+
+            } else {
                 List<QuestionTemplate> candidates = questionTemplateRepository.findByMetricTypeAndIsActiveTrue(type);
-                template = candidates.get(0);
-            }
+                QuestionTemplate template = candidates.get(0);
 
-            EveningQuestion question = EveningQuestion.builder()
-                    .templateId(template.getId())
-                    .userId(userId)
-                    .questionDate(today)
-                    .metricType(type)
-                    .content(template.getContent())
-                    .answerType(template.getAnswerType())
-                    .choices(template.getChoices())
-                    .build();
+                question = EveningQuestion.builder()
+                        .templateId(template.getId())
+                        .userId(userId)
+                        .questionDate(today)
+                        .metricType(type)
+                        .content(template.getContent())
+                        .answerType(template.getAnswerType())
+                        .choices(template.getChoices())
+                        .build();
+            }
 
             EveningQuestion saved = eveningQuestionRepository.save(question);
             questions.add(saved);
@@ -194,16 +216,11 @@ public class EveningQuestionService {
         }
         try {
             return objectMapper.readValue(choicesJson,
-                    new TypeReference<List<EveningQuestionResponse.ChoiceItem>>() {});
+                    new TypeReference<List<EveningQuestionResponse.ChoiceItem>>() {
+                    });
         } catch (JacksonException e) {
             throw new RuntimeException("choices 파싱 실패", e);
         }
-    }
-
-    public String transcribe(MultipartFile audioFile) {
-        // TODO: 실제 STT API(Whisper, 클로바 스피치 등) 연동 필요
-        // 지금은 스텁으로 고정 문자열 반환
-        return "음성 인식 결과 예시";
     }
 
     private QuestionTemplate pickCustomTemplate(Long userId, MetricType type) {
@@ -231,22 +248,56 @@ public class EveningQuestionService {
     }
 
     public VoiceTranscribeResponse transcribe(Long questionId, MultipartFile audioFile) {
+        String transcript = callWhisperApi(audioFile);
+        return new VoiceTranscribeResponse(transcript);
+    }
 
-        // TODO: 실제 STT API(Whisper, 클로바 스피치 등) 연동 필요. 지금은 스텁으로 고정 문자열 반환.
-        String transcript = "음성 인식 결과 예시";
+    private String callWhisperApi(MultipartFile audioFile) {
+        try {
+            MultipartBodyBuilder builder = new MultipartBodyBuilder();
+            builder.part("file", audioFile.getResource());
+            builder.part("model", "whisper-1");
 
-        // TODO: 실제로는 LLM에게 "이 텍스트가 어느 선택지에 가까운지" 판단시켜야 함.
-        //       지금은 첫 번째 선택지를 임시로 반환.
-        Optional<EveningQuestion> questionOpt = eveningQuestionRepository.findById(questionId);
-        String matchedChoice = null;
+            Map<String, Object> response = openAiWebClient.post()
+                    .uri("/audio/transcriptions")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(builder.build()))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
 
-        if (questionOpt.isPresent()) {
-            List<EveningQuestionResponse.ChoiceItem> choices = parseChoices(questionOpt.get().getChoices());
-            if (choices != null && !choices.isEmpty()) {
-                matchedChoice = choices.get(0).label();
-            }
+            return (String) response.get("text");
+
+        } catch (Exception e) {
+            throw new RuntimeException("음성 인식 실패", e);
         }
+    }
 
-        return new VoiceTranscribeResponse(transcript, matchedChoice);
+    private String generateCustomQuestionByAi(Long userId) {
+
+        try {
+            Optional<HealthProfile> profileOpt = healthProfileRepository.findByUserId(userId);
+
+            String disease = "특별한 질환 없음";
+            if (profileOpt.isPresent() && profileOpt.get().getDiseases() != null
+                    && !profileOpt.get().getDiseases().isEmpty()) {
+                disease = String.join(", ", profileOpt.get().getDiseases());
+            }
+
+            String prompt = String.format(
+                    "당신은 어르신을 위한 건강 체크 앱의 질문 작성자입니다. " +
+                    "이 사용자의 질환은 '%s'입니다. " +
+                    "이 질환과 관련해서, 오늘 하루를 돌아보는 따뜻하고 부담 없는 건강 체크 질문을 " +
+                    "한 문장으로만 작성해주세요. 질문 외의 다른 말은 하지 마세요.",
+                    disease
+            );
+
+            return gptClient.ask(prompt).trim();
+
+        } catch (Exception e) {
+            // GPT 호출 실패 시 기존 폴백 템플릿으로
+            QuestionTemplate fallback = pickCustomTemplate(userId, MetricType.CUSTOM);
+            return fallback.getContent();
+        }
     }
 }

@@ -14,3 +14,7 @@ aws:
     region: ap-northeast-2
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
+
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: gpt-4o-mini
