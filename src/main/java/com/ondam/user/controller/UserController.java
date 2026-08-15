@@ -6,6 +6,7 @@ import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
 import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
 import com.ondam.user.dto.request.UserCreateRequest;
 import com.ondam.user.dto.response.HealthProfileResponse;
+import com.ondam.user.dto.response.InviteCodeResponse;
 import com.ondam.user.dto.response.NotificationSettingResponse;
 import com.ondam.user.dto.response.UserCreateResponse;
 import com.ondam.user.service.UserService;
@@ -98,5 +99,17 @@ public class UserController {
         );
 
         return ApiResponse.success(null);
+    }
+
+    @Operation(summary = "초대 코드 조회", description = "사용자의 초대코드를 보여줍니다.")
+    @PostMapping("/me/invitecode")
+    public ApiResponse<InviteCodeResponse> getInviteCode(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+
+        InviteCodeResponse response =
+                userService.getInviteCode(userId);
+
+        return ApiResponse.success(response);
     }
 }
