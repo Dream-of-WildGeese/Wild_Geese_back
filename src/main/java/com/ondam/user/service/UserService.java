@@ -223,4 +223,31 @@ public class UserService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public HealthProfileResponse getHealthProfile(Long userId) {
+
+        // 사용자 존재 여부 확인
+        userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 해당 사용자의 건강프로필 조회
+        HealthProfile healthProfile =
+                healthProfileRepository.findByUserId(userId)
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.HEALTH_PROFILE_NOT_FOUND
+                                )
+                        );
+
+        return new HealthProfileResponse(
+                healthProfile.getId(),
+                healthProfile.getBirthDate(),
+                healthProfile.getGender(),
+                healthProfile.getDiseases(),
+                healthProfile.getWellnessInterests()
+        );
+    }
+
 }

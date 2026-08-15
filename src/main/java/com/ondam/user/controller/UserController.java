@@ -124,4 +124,16 @@ public class UserController {
         );
     }
 
+    @Operation(
+            summary = "건강 프로필 조회",
+            description = "현재 사용자의 건강 프로필을 조회합니다."
+    )
+    @GetMapping("/me/healthprofile")
+    public ApiResponse<HealthProfileResponse> getHealthProfile(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+        return ApiResponse.success(
+                userService.getHealthProfile(userId)
+        );
+    }
 }
