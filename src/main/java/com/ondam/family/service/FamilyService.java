@@ -36,9 +36,25 @@ public class FamilyService {
                         new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        // 2. 이미 가족에 속해 있으면 참여 불가
+        // 이미 가족에 속해 있는 경우
         if (joiningUser.getFamily() != null) {
-            throw new BusinessException(ErrorCode.ALREADY_JOINED);
+
+            Family family = joiningUser.getFamily();
+
+            User connectedUser = userRepository
+                    .findFirstByFamilyIdAndIdNot(
+                            family.getId(),
+                            joiningUser.getId()
+                    )
+                    .orElseThrow(() ->
+                            new BusinessException(ErrorCode.USER_NOT_FOUND)
+                    );
+
+            return new FamilyJoinResponse(
+                    family.getId(),
+                    connectedUser.getId(),
+                    connectedUser.getName()
+            );
         }
 
         // 3. 입력한 초대코드의 주인 찾기

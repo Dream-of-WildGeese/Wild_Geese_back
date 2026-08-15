@@ -11,9 +11,6 @@ import java.util.List;
 
 public record HealthProfileUpdateRequest(
 
-        @NotBlank
-        String name,
-
         @NotNull
         LocalDate birthDate,
 

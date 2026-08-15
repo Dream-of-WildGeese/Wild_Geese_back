@@ -7,6 +7,7 @@ import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
 import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
 import com.ondam.user.dto.request.UserCreateRequest;
 import com.ondam.user.dto.response.HealthProfileResponse;
+import com.ondam.user.dto.response.InviteCodeResponse;
 import com.ondam.user.dto.response.NotificationSettingResponse;
 import com.ondam.user.dto.response.UserCreateResponse;
 import com.ondam.user.entity.HealthProfile;
@@ -196,6 +197,19 @@ public class UserService {
                 );
 
         pushSubscriptionRepository.save(subscription);
+    }
+
+    @Transactional(readOnly = true)
+    public InviteCodeResponse getInviteCode(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        return new InviteCodeResponse(
+                user.getInviteCode()
+        );
     }
 
 }
