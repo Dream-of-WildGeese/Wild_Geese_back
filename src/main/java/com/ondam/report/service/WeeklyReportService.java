@@ -9,6 +9,10 @@ import com.ondam.record.repository.HealthRecordRepository;
 import com.ondam.record.entity.HealthRecord;
 import com.ondam.medication.repository.MedicationLogRepository;
 import com.ondam.medication.entity.MedicationLogStatus;
+import com.ondam.question.entity.EveningQuestion;
+import com.ondam.question.entity.EveningAnswer;
+import com.ondam.question.repository.EveningQuestionRepository;
+import com.ondam.question.repository.EveningAnswerRepository;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
@@ -31,6 +35,8 @@ public class WeeklyReportService {
     private final WeeklyReportRepository weeklyReportRepository;
     private final HealthRecordRepository healthRecordRepository;
     private final MedicationLogRepository medicationLogRepository;
+    private final EveningQuestionRepository eveningQuestionRepository;
+    private final EveningAnswerRepository eveningAnswerRepository;
     private final ObjectMapper objectMapper;
 
     public WeeklyReportResponse getWeeklyReport(Long userId, LocalDate weekStartDate) {
@@ -55,7 +61,7 @@ public class WeeklyReportService {
         boolean isBaselineSufficient = false;
 
         List<MetricType> types = List.of(MetricType.CONDITION, MetricType.SLEEP,
-                MetricType.MEAL, MetricType.ACTIVITY, MetricType.CUSTOM);
+                MetricType.MEAL, MetricType.ACTIVITY);
 
         for (MetricType type : types) {
 
@@ -117,6 +123,31 @@ public class WeeklyReportService {
 
             metrics.put(type.toString(), detail);
         }
+
+        // CUSTOM 답변들을 모아서 코멘트 생성 (나중에 GPT 연동)
+        List<EveningQuestion> customQuestions = eveningQuestionRepository
+                .findByUserIdAndMetricTypeAndQuestionDateBetween(
+                        userId, MetricType.CUSTOM, thisWeekStart, thisWeekEnd);
+
+        List<String> customTexts = new ArrayList<>();
+
+        for (EveningQuestion cq : customQuestions) {
+            Optional<EveningAnswer> answerOpt = eveningAnswerRepository
+                    .findByEveningQuestionIdAndUserId(cq.getId(), userId);
+            if (answerOpt.isPresent() && answerOpt.get().getTextValue() != null) {
+                customTexts.add(answerOpt.get().getTextValue());
+            }
+        }
+
+        // TODO: 실제로는 이 customTexts를 GPT에게 넘겨서 코멘트 생성 요청
+        // 지금은 임시로 답변 존재 여부만으로 스텁 문구 생성
+        String customComment;
+        if (customTexts.isEmpty()) {
+            customComment = "이번 주 질환 관련 답변이 아직 없어요.";
+        } else {
+            customComment = "이번 주 질환 관련 답변을 " + customTexts.size() + "번 남겨주셨어요.";
+        }
+
         // 5. weeklyComment, nextWeekSuggestion도 고정 문구로
         String weeklyComment = isBaselineSufficient
                 ? "이번 주 건강 기록을 확인해보세요."
@@ -170,6 +201,7 @@ public class WeeklyReportService {
                 .weeklyComment(weeklyComment)
                 .metrics(metrics)
                 .medication(medicationSummary)
+                .customComment(customComment)
                 .nextWeekSuggestion(nextWeekSuggestion)
                 .build();
     }
