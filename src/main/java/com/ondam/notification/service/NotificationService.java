@@ -4,9 +4,11 @@ import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
 import com.ondam.notification.dto.response.NotificationResponse;
 import com.ondam.notification.entity.Notification;
+import com.ondam.notification.entity.NotificationType;
 import com.ondam.notification.repository.NotificationRepository;
 import com.ondam.user.dto.response.HealthProfileResponse;
 import com.ondam.user.entity.HealthProfile;
+import com.ondam.user.entity.User;
 import com.ondam.user.repository.HealthProfileRepository;
 import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -76,6 +80,30 @@ public class NotificationService {
                         );
 
         notification.markAsRead();
+    }
+
+    @Transactional
+    public Notification createNotification(
+            Long userId,
+            NotificationType type,
+            String title,
+            String content,
+            LocalDateTime scheduledAt
+    ) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        Notification notification = new Notification(
+                user,
+                type,
+                title,
+                content,
+                scheduledAt
+        );
+
+        return notificationRepository.save(notification);
     }
 
 }
