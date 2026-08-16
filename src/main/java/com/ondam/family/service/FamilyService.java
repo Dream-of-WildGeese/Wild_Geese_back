@@ -8,7 +8,9 @@ import com.ondam.family.entity.Family;
 import com.ondam.family.repository.FamilyRepository;
 import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
+import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.entity.User;
+import com.ondam.user.repository.HealthProfileRepository;
 import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class FamilyService {
 
     private final FamilyRepository familyRepository;
     private final UserRepository userRepository;
+    private final HealthProfileRepository healthProfileRepository;
 
     @Transactional
     public FamilyJoinResponse joinFamily(
@@ -110,10 +113,22 @@ public class FamilyService {
         List<FamilyMemberResponse> members =
                 userRepository.findAllByFamilyId(family.getId())
                         .stream()
-                        .map(member -> new FamilyMemberResponse(
-                                member.getId(),
-                                member.getEmail()
-                        ))
+                        .map(member -> {
+
+                            HealthProfile healthProfile =
+                                    healthProfileRepository
+                                            .findByUserId(member.getId())
+                                            .orElse(null);
+
+                            return new FamilyMemberResponse(
+                                    member.getId(),
+                                    member.getEmail(),
+                                    member.getRole(),
+                                    healthProfile != null
+                                            ? healthProfile.getGender()
+                                            : null
+                            );
+                        })
                         .toList();
 
         return new FamilyInfoResponse(
