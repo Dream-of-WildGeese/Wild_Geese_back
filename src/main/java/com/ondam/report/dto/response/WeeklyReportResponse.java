@@ -11,11 +11,12 @@ public record WeeklyReportResponse(
         String weekEndDate,
         boolean isBaselineSufficient,
         String weeklyComment,
-        String weeklyDetail,   // ← 이 필드 추가하셨나요?
+        String weeklyDetail,
         Map<String, MetricDetail> metrics,
         MedicationSummary medication,
         String customComment,
-        String nextWeekSuggestion
+        String nextWeekSuggestion,
+        String aiCoachInsight
 ) {
     @Builder
     public record MetricDetail(
