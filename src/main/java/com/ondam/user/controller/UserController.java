@@ -136,4 +136,5 @@ public class UserController {
                 userService.getHealthProfile(userId)
         );
     }
+
 }

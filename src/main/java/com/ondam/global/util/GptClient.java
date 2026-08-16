@@ -14,7 +14,7 @@ public class GptClient {
 
     private final WebClient openAiWebClient;
 
-    @Value("${openai.model:dummy-model}")
+    @Value("${openai.model}")
     private String model;
 
     public String ask(String prompt) {
