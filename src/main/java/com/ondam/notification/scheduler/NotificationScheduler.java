@@ -11,6 +11,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import com.ondam.notification.service.WebPushService;
+
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,6 +27,7 @@ public class NotificationScheduler {
     private final NotificationService notificationService;
     private final NotificationSettingRepository notificationSettingRepository;
     private final MedicationScheduleRepository medicationScheduleRepository;
+    private final WebPushService webPushService;
 
     @Scheduled(cron = "0 * * * * *")
     @Transactional
@@ -57,7 +60,13 @@ public class NotificationScheduler {
                         "오늘의 아침 질문이 도착했어요.",
                         LocalDateTime.now(ZoneId.of("Asia/Seoul"))
                 );
+                webPushService.sendPush(
+                        setting.getUser().getId(),
+                        "아침 연결 질문",
+                        "오늘의 아침 질문이 도착했어요."
+                );
             }
+
 
             if (setting.isEveningEnabled()
                     && setting.getEveningTime() != null
@@ -69,6 +78,11 @@ public class NotificationScheduler {
                         "저녁 건강 체크",
                         "오늘의 건강 체크 시간이 되었어요.",
                         LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+                );
+                webPushService.sendPush(
+                        setting.getUser().getId(),
+                        "저녁 건강 체크",
+                        "오늘의 건강 체크 시간이 되었어요."
                 );
             }
         }
@@ -111,6 +125,11 @@ public class NotificationScheduler {
                     "복약 알림",
                     schedule.getMedication().getName() + " 복용 시간이에요.",
                     LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+            );
+            webPushService.sendPush(
+                    userId,
+                    "복약 알림",
+                    schedule.getMedication().getName() + " 복용 시간이에요."
             );
         }
     }
