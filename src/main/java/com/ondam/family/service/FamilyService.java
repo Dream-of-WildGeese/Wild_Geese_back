@@ -33,49 +33,49 @@ public class FamilyService {
             FamilyJoinRequest request
     ) {
 
-        // 1. 코드를 입력한 사용자
+        // 1. 코드 입력한 사용자
         User joiningUser = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        // 이미 가족에 속해 있는 경우
-        if (joiningUser.getFamily() != null) {
-
-            Family family = joiningUser.getFamily();
-
-            User connectedUser = userRepository
-                    .findFirstByFamilyIdAndIdNot(
-                            family.getId(),
-                            joiningUser.getId()
-                    )
-                    .orElseThrow(() ->
-                            new BusinessException(ErrorCode.USER_NOT_FOUND)
-                    );
-
-            return new FamilyJoinResponse(
-                    family.getId(),
-                    connectedUser.getId(),
-                    connectedUser.getName()
-            );
-        }
-
-        // 3. 입력한 초대코드의 주인 찾기
+        // 2. 입력한 초대코드 주인
         User inviter = userRepository
                 .findByInviteCode(request.inviteCode())
                 .orElseThrow(() ->
                         new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        // 4. 자기 자신의 코드 입력 방지
+        // 3. 자기 자신의 코드 방지
         if (joiningUser.getId().equals(inviter.getId())) {
             throw new BusinessException(ErrorCode.CANNOT_JOIN_SELF);
         }
 
-        // 5. 초대한 사용자가 이미 속한 가족 확인
+        // 4. 이미 가족인 경우
+        if (joiningUser.getFamily() != null) {
+
+            Family currentFamily = joiningUser.getFamily();
+
+            // 입력한 초대코드의 주인이 현재 같은 가족이면
+            // 그 사람을 연결된 사용자로 반환
+            if (inviter.getFamily() != null
+                    && currentFamily.getId().equals(inviter.getFamily().getId())) {
+
+                return new FamilyJoinResponse(
+                        currentFamily.getId(),
+                        inviter.getId(),
+                        inviter.getName()
+                );
+            }
+
+            // 다른 가족의 코드를 입력한 경우
+            throw new BusinessException(ErrorCode.ALREADY_JOINED);
+        }
+
+        // 5. 초대한 사람이 속한 가족
         Family family = inviter.getFamily();
 
-        // 6. 초대한 사람도 아직 가족이 없다면 새 가족 생성
+        // 6. 초대한 사람도 가족이 없다면 생성
         if (family == null) {
 
             Family newFamily = new Family(
@@ -87,9 +87,10 @@ public class FamilyService {
             inviter.joinFamily(family);
         }
 
-        // 7. 코드 입력한 사용자도 같은 가족에 연결
+        // 7. 코드 입력한 사용자 가족 연결
         joiningUser.joinFamily(family);
 
+        // 8. 반드시 "입력한 초대코드의 주인"을 반환
         return new FamilyJoinResponse(
                 family.getId(),
                 inviter.getId(),
