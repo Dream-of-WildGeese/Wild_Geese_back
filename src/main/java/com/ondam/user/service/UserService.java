@@ -2,10 +2,7 @@ package com.ondam.user.service;
 
 import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
-import com.ondam.user.dto.request.HealthProfileUpdateRequest;
-import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
-import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
-import com.ondam.user.dto.request.UserCreateRequest;
+import com.ondam.user.dto.request.*;
 import com.ondam.user.dto.response.*;
 import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.entity.NotificationSetting;
@@ -185,6 +182,13 @@ public class UserService {
                         new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
+        // 이미 등록된 endpoint라면 중복 저장하지 않음
+        if (pushSubscriptionRepository
+                .findByEndpoint(request.endpoint())
+                .isPresent()) {
+            return;
+        }
+
         PushSubscription subscription =
                 new PushSubscription(
                         user,
@@ -248,6 +252,30 @@ public class UserService {
                 healthProfile.getDiseases(),
                 healthProfile.getWellnessInterests()
         );
+    }
+
+    @Transactional
+    public void deletePushSubscription(
+            Long userId,
+            PushSubscriptionDeleteRequest request
+    ) {
+
+        PushSubscription subscription =
+                pushSubscriptionRepository
+                        .findByEndpoint(request.endpoint())
+                        .orElse(null);
+
+        // 이미 없으면 로그아웃은 그냥 성공 처리
+        if (subscription == null) {
+            return;
+        }
+
+        // 다른 사용자의 구독을 삭제하지 못하도록 확인
+        if (!subscription.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        pushSubscriptionRepository.delete(subscription);
     }
 
 }

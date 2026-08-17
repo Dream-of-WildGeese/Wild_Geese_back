@@ -9,4 +9,5 @@ public interface HealthProfileRepository
         extends JpaRepository<HealthProfile, Long> {
 
     Optional<HealthProfile> findByUserId(Long userId);
+
 }

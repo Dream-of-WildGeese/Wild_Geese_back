@@ -1,10 +1,7 @@
 package com.ondam.user.controller;
 
 import com.ondam.global.common.ApiResponse;
-import com.ondam.user.dto.request.HealthProfileUpdateRequest;
-import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
-import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
-import com.ondam.user.dto.request.UserCreateRequest;
+import com.ondam.user.dto.request.*;
 import com.ondam.user.dto.response.*;
 import com.ondam.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -98,6 +95,24 @@ public class UserController {
         return ApiResponse.success(null);
     }
 
+    @Operation(
+            summary = "푸시 알림 구독 해제",
+            description = "로그아웃 시 현재 브라우저의 푸시 구독 정보를 삭제합니다."
+    )
+    @DeleteMapping("/me/pushsubscriptions")
+    public ApiResponse<Void> deletePushSubscription(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody @Valid PushSubscriptionDeleteRequest request
+    ) {
+
+        userService.deletePushSubscription(
+                userId,
+                request
+        );
+
+        return ApiResponse.success(null);
+    }
+
     @Operation(summary = "초대 코드 조회", description = "사용자의 초대코드를 보여줍니다.")
     @PostMapping("/me/invitecode")
     public ApiResponse<InviteCodeResponse> getInviteCode(
@@ -136,4 +151,5 @@ public class UserController {
                 userService.getHealthProfile(userId)
         );
     }
+
 }
