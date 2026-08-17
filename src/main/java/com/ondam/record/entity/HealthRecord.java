@@ -52,4 +52,9 @@ public class HealthRecord extends BaseTimeEntity {
         this.source = source;
         this.eveningAnswerId = eveningAnswerId;
     }
+
+    public void update(BigDecimal numericValue, String textValue) {
+        this.numericValue = numericValue;
+        this.textValue = textValue;
+    }
 }

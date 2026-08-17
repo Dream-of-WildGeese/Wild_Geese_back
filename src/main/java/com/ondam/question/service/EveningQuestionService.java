@@ -72,6 +72,7 @@ public class EveningQuestionService {
         return buildResponse(questions, userId);
     }
 
+    @Transactional
     public void submitAnswers(Long userId, EveningAnswerSubmitRequest request) {
 
         for (EveningAnswerSubmitRequest.AnswerItem item : request.answers()) {
@@ -84,23 +85,10 @@ public class EveningQuestionService {
 
             EveningQuestion question = questionOpt.get();
 
-            EveningAnswer answer = EveningAnswer.builder()
-                    .eveningQuestionId(item.questionId())
-                    .userId(userId)
-                    .textValue(item.textValue())
-                    .choiceValue(item.choiceValue())
-                    .inputType(item.inputType())
-                    .answeredAt(LocalDateTime.now())
-                    .build();
-
-            eveningAnswerRepository.save(answer);
-
             // choices에서 numericValue 찾기
             BigDecimal numericValue = null;
-
             if (item.choiceValue() != null) {
                 List<EveningQuestionResponse.ChoiceItem> choices = parseChoices(question.getChoices());
-
                 if (choices != null) {
                     for (EveningQuestionResponse.ChoiceItem choice : choices) {
                         if (choice.label().equals(item.choiceValue())) {
@@ -111,17 +99,43 @@ public class EveningQuestionService {
                 }
             }
 
-            HealthRecord healthRecord = HealthRecord.builder()
-                    .userId(userId)
-                    .recordDate(DateUtils.today())
-                    .metricType(question.getMetricType())
-                    .numericValue(numericValue)
-                    .textValue(item.textValue())
-                    .source(SourceType.ANSWER)
-                    .eveningAnswerId(answer.getId())
-                    .build();
+            Optional<EveningAnswer> existingOpt = eveningAnswerRepository
+                    .findByEveningQuestionIdAndUserId(question.getId(), userId);
 
-            healthRecordRepository.save(healthRecord);
+            if (existingOpt.isPresent()) {
+                // 1. 기존 답변이 있으면 Update
+                EveningAnswer existingAnswer = existingOpt.get();
+                existingAnswer.update(item.textValue(), item.choiceValue(), item.inputType());
+
+                // 2. 연결된 HealthRecord도 같이 Update
+                Optional<HealthRecord> recordOpt = healthRecordRepository.findByEveningAnswerId(existingAnswer.getId());
+                if (recordOpt.isPresent()) {
+                    recordOpt.get().update(numericValue, item.textValue());
+                }
+            } else {
+                // 1. 없으면 Insert
+                EveningAnswer answer = EveningAnswer.builder()
+                        .eveningQuestionId(item.questionId())
+                        .userId(userId)
+                        .textValue(item.textValue())
+                        .choiceValue(item.choiceValue())
+                        .inputType(item.inputType())
+                        .answeredAt(LocalDateTime.now())
+                        .build();
+                eveningAnswerRepository.save(answer);
+
+                // 2. HealthRecord도 새로 Insert
+                HealthRecord healthRecord = HealthRecord.builder()
+                        .userId(userId)
+                        .recordDate(DateUtils.today())
+                        .metricType(question.getMetricType())
+                        .numericValue(numericValue)
+                        .textValue(item.textValue())
+                        .source(SourceType.ANSWER)
+                        .eveningAnswerId(answer.getId())
+                        .build();
+                healthRecordRepository.save(healthRecord);
+            }
         }
 
         dailyLogService.refresh(userId, DateUtils.today());

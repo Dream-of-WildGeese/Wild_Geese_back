@@ -45,4 +45,11 @@ public class EveningAnswer extends BaseTimeEntity {
         this.inputType = inputType;
         this.answeredAt = answeredAt;
     }
+
+    public void update(String textValue, String choiceValue, InputType inputType) {
+        this.textValue = textValue;
+        this.choiceValue = choiceValue;
+        this.inputType = inputType;
+        this.answeredAt = LocalDateTime.now();
+    }
 }

@@ -118,15 +118,24 @@ public class MorningQuestionService {
         MorningQuestion question = morningQuestionRepository.findById(questionId)
                 .orElseThrow(() -> new RuntimeException("질문이 존재하지 않습니다."));
 
-        MorningAnswer answer = MorningAnswer.builder()
-                .morningQuestionId(question.getId())
-                .userId(userId)
-                .textValue(request.textValue())
-                .inputType(request.inputType())
-                .answeredAt(LocalDateTime.now())
-                .build();
+        Optional<MorningAnswer> existingOpt = morningAnswerRepository
+                .findByMorningQuestionIdAndUserId(question.getId(), userId);
 
-        morningAnswerRepository.save(answer);
+        if (existingOpt.isPresent()) {
+            // 이미 답변이 있으면 덮어쓰기 (Update)
+            existingOpt.get().update(request.textValue(), request.inputType());
+        } else {
+            // 없으면 새로 저장 (Insert)
+            MorningAnswer answer = MorningAnswer.builder()
+                    .morningQuestionId(question.getId())
+                    .userId(userId)
+                    .textValue(request.textValue())
+                    .inputType(request.inputType())
+                    .answeredAt(LocalDateTime.now())
+                    .build();
+            morningAnswerRepository.save(answer);
+        }
+
         dailyLogService.refresh(userId, DateUtils.today());
     }
 

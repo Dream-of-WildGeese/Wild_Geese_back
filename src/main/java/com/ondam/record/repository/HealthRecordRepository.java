@@ -22,4 +22,5 @@ public interface HealthRecordRepository extends JpaRepository<HealthRecord, Long
             @Param("to") LocalDate to);
 
     List<HealthRecord> findByUserIdAndMetricTypeAndRecordDateBetween(Long userId, MetricType metricType, LocalDate from, LocalDate to);
+    Optional<HealthRecord> findByEveningAnswerId(Long eveningAnswerId);
 }
