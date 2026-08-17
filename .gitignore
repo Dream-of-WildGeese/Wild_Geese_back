@@ -45,3 +45,4 @@ application-prod.yml
 *.jar
 .DS_Store
 structure.txt
+repomix-output.xml
