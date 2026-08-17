@@ -1,5 +1,8 @@
 package com.ondam.question.service;
 
+import com.ondam.notification.entity.NotificationType;
+import com.ondam.notification.service.NotificationService;
+import com.ondam.notification.service.WebPushService;
 import com.ondam.global.common.DateUtils;
 import com.ondam.global.util.GptClient;
 import com.ondam.question.entity.EveningQuestion;
@@ -16,9 +19,14 @@ import com.ondam.question.dto.request.EveningAnswerSubmitRequest;
 import com.ondam.record.entity.HealthRecord;
 import com.ondam.record.entity.SourceType;
 import com.ondam.record.repository.HealthRecordRepository;
+import com.ondam.report.service.WeeklyReportService;
 import com.ondam.user.repository.HealthProfileRepository;
+import com.ondam.user.repository.NotificationSettingRepository;
+import com.ondam.user.repository.UserRepository;
 import com.ondam.user.entity.HealthProfile;
 import com.ondam.user.entity.WellnessInterest;
+import com.ondam.user.entity.NotificationSetting;
+import com.ondam.user.entity.User;
 import com.ondam.dailylog.service.DailyLogService;
 
 import tools.jackson.databind.ObjectMapper;
@@ -32,8 +40,9 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.annotation.Transactional;
 
-
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -58,6 +67,12 @@ public class EveningQuestionService {
     private final DailyLogService dailyLogService;
     private final WebClient openAiWebClient;
     private final GptClient gptClient;
+
+    private final WeeklyReportService weeklyReportService;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final NotificationSettingRepository notificationSettingRepository;
+    private final WebPushService webPushService;
 
     public EveningQuestionResponse getTodayQuestions(Long userId) {
 
@@ -139,6 +154,41 @@ public class EveningQuestionService {
         }
 
         dailyLogService.refresh(userId, DateUtils.today());
+
+        // ▼ 2. 일요일인 경우 주간 리포트 즉시 생성 및 가족 교차 알림
+        LocalDate today = DateUtils.today();
+        if (today.getDayOfWeek() == DayOfWeek.SUNDAY) {
+
+            // 본인의 주간 리포트 생성 (getWeeklyReport 내부에 생성/저장 로직이 이미 있음)
+            weeklyReportService.getWeeklyReport(userId, today);
+
+            // 가족 조회
+            User me = userRepository.findById(userId).orElseThrow();
+            Long familyId = me.getFamily().getId();
+            List<User> familyMembers = userRepository.findAllByFamilyId(familyId);
+
+            for (User member : familyMembers) {
+                // 본인이 아닌 가족 구성원(부모 ↔ 자녀)에게만 발송
+                if (!member.getId().equals(userId)) {
+                    NotificationSetting setting = notificationSettingRepository.findByUserId(member.getId()).orElse(null);
+
+                    // 상대방이 리포트 알림을 켜둔 경우에만 푸시
+                    if (setting != null && setting.isReportEnabled()) {
+                        String title = "가족 주간 리포트 도착";
+                        String content = me.getName() + "님의 이번 주 건강 리포트가 완성되었어요. 확인해보세요!";
+
+                        notificationService.createNotification(
+                                member.getId(),
+                                NotificationType.WEEKLY_REPORT,
+                                title,
+                                content,
+                                LocalDateTime.now()
+                        );
+                        webPushService.sendPush(member.getId(), title, content);
+                    }
+                }
+            }
+        }
     }
 
     private List<EveningQuestion> generateTodayQuestions(Long userId, LocalDate today) {

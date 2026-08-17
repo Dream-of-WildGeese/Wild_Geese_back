@@ -1,6 +1,12 @@
 package com.ondam.question.service;
 
+import com.ondam.notification.entity.NotificationType;
+import com.ondam.notification.service.NotificationService;
+import com.ondam.notification.service.WebPushService;
+import com.ondam.user.entity.NotificationSetting;
+import com.ondam.user.repository.NotificationSettingRepository;
 import com.ondam.global.common.DateUtils;
+import com.ondam.global.util.GptClient;
 import com.ondam.question.entity.MorningQuestion;
 import com.ondam.question.entity.MorningAnswer;
 import com.ondam.question.repository.MorningQuestionRepository;
@@ -15,12 +21,14 @@ import com.ondam.dailylog.service.DailyLogService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -29,8 +37,13 @@ public class MorningQuestionService {
     private final MorningQuestionRepository morningQuestionRepository;
     private final MorningAnswerRepository morningAnswerRepository;
     private final UserRepository userRepository;
-
     private final DailyLogService dailyLogService;
+
+    private final NotificationService notificationService;
+    private final NotificationSettingRepository notificationSettingRepository;
+    private final WebPushService webPushService;
+
+    private final GptClient gptClient;
 
     public MorningQuestionResponse getTodayQuestion(Long userId) {
         // 1. userId로 User 조회 → Family 얻기
@@ -102,7 +115,7 @@ public class MorningQuestionService {
 
     private MorningQuestion generateTodayQuestion(Long familyId, LocalDate today) {
 
-        String content = "오늘 점심에 가장 먹고 싶은 음식은?";  // TODO: 나중에 AI로 생성하도록 교체
+        String content = generateMorningQuestionByAi();
 
         MorningQuestion question = MorningQuestion.builder()
                 .familyId(familyId)
@@ -113,6 +126,35 @@ public class MorningQuestionService {
         return morningQuestionRepository.save(question);
     }
 
+    // ai 질문 생성 메서드
+    private String generateMorningQuestionByAi() {
+        try {
+            String prompt = """
+                당신은 가족 간의 따뜻한 소통을 돕는 헬스케어 앱의 질문 작성자입니다.
+                가족들이 아침에 서로 안부를 묻거나 가볍게 대화를 시작할 수 있는 기분 좋은 질문 1개를 작성해주세요.
+
+                [작성 지침]
+                1. 무겁거나 심각한 주제는 피하고, 일상적이고 긍정적인 주제(예: 식사, 어릴 적 추억, 오늘의 기분, 날씨, 소소한 계획 등)를 선택하세요.
+                2. 어르신(부모님)과 자녀 세대가 모두 쉽게 공감하고 대답할 수 있는 질문이어야 합니다.
+                3. 부드럽고 다정한 존댓말로 작성하세요.
+                4. 부가적인 설명, 따옴표, 인사말 없이 오직 질문 딱 한 문장만 출력하세요.
+                """;
+            return gptClient.ask(prompt).trim();
+
+        } catch (Exception e) {
+            // GPT API 실패 시 기본적으로 돌려줄 안전한 폴백(Fallback) 질문 리스트
+            List<String> fallbacks = List.of(
+                    "오늘은 어떤 메뉴를 드시고 싶으신가요?",
+                    "오늘 하루, 가장 기대되는 일은 무엇인가요?",
+                    "최근에 가장 흥미있는 관심사가 무엇인가요?",
+                    "가장 좋아하는 계절과 그 이유는 무엇인가요?",
+                    "최근에 가족과 함께 먹고 싶은 음식이 있다면 무엇인가요?"
+            );
+            return fallbacks.get(new Random().nextInt(fallbacks.size()));
+        }
+    }
+
+    @Transactional
     public void submitAnswer(Long userId, Long questionId, MorningAnswerRequest request) {
 
         MorningQuestion question = morningQuestionRepository.findById(questionId)
@@ -134,6 +176,27 @@ public class MorningQuestionService {
                     .answeredAt(LocalDateTime.now())
                     .build();
             morningAnswerRepository.save(answer);
+        }
+
+        User me = userRepository.findById(userId).orElseThrow();
+        Long familyId = me.getFamily().getId();
+
+        List<User> familyMembers = userRepository.findAllByFamilyId(familyId);
+
+        for (User member : familyMembers) {
+            // 본인에게는 알림을 보내지 않음
+            if (!member.getId().equals(userId)) {
+                NotificationSetting setting = notificationSettingRepository.findByUserId(member.getId()).orElse(null);
+
+                // 가족 반응 알림을 켜둔 구성원에게만
+                if (setting != null && setting.isFamilyReactionEnabled()) {
+                    String title = "가족의 답변이 등록되었어요!";
+                    String content = me.getName() + "님이 오늘의 아침 질문에 답변을 남겼습니다.";
+
+                    notificationService.createNotification(member.getId(), NotificationType.MORNING_QUESTION, title, content, java.time.LocalDateTime.now());
+                    webPushService.sendPush(member.getId(), title, content);
+                }
+            }
         }
 
         dailyLogService.refresh(userId, DateUtils.today());

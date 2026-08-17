@@ -1,5 +1,10 @@
 package com.ondam.letter.service;
 
+import com.ondam.notification.entity.NotificationType;
+import com.ondam.notification.service.NotificationService;
+import com.ondam.notification.service.WebPushService;
+import com.ondam.user.entity.NotificationSetting;
+import com.ondam.user.repository.NotificationSettingRepository;
 import com.ondam.letter.entity.Letter;
 import com.ondam.letter.repository.LetterRepository;
 import com.ondam.letter.dto.request.LetterSendRequest;
@@ -9,12 +14,19 @@ import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import com.ondam.global.util.S3Uploader;
 
+
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.web.reactive.function.BodyInserters;
 
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -25,6 +37,13 @@ public class LetterService {
     private final UserRepository userRepository;
     private final S3Uploader s3Uploader;
 
+    private final NotificationService notificationService;
+    private final NotificationSettingRepository notificationSettingRepository;
+    private final WebPushService webPushService;
+
+    private final WebClient openAiWebClient;
+
+    @Transactional
     public void sendLetter(Long fromUserId, LetterSendRequest request) {
 
         Letter letter = Letter.builder()
@@ -35,6 +54,8 @@ public class LetterService {
                 .build();
 
         letterRepository.save(letter);
+
+        sendFamilyReactionPush(fromUserId, request.toUserId(), "새로운 편지가 도착했어요!", "가족이 보낸 따뜻한 편지를 확인해보세요.");
     }
 
     public Page<LetterResponse> getReceivedLetters(Long userId, Pageable pageable) {
@@ -137,19 +158,64 @@ public class LetterService {
         letterRepository.save(letter);
     }
 
+    @Transactional
     public void sendVoiceLetter(Long fromUserId, Long toUserId, MultipartFile audioFile) {
 
         String audioUrl = s3Uploader.upload(audioFile, "letters");
+
+        String transcribedText = callWhisperApi(audioFile);
 
         // TODO: STT로 content도 채울 수 있으면 좋지만, 지금은 생략(비워둠)
         Letter letter = Letter.builder()
                 .fromUserId(fromUserId)
                 .toUserId(toUserId)
-                .content(null)
+                .content(transcribedText)
                 .inputType(InputType.VOICE)
                 .audioUrl(audioUrl)
                 .build();
 
         letterRepository.save(letter);
+
+        sendFamilyReactionPush(fromUserId, toUserId, "새로운 음성 편지가 도착했어요!", "가족이 보낸 따뜻한 목소리를 들어보세요.");
+    }
+
+    // STT API 호출 메서드
+    private String callWhisperApi(MultipartFile audioFile) {
+        try {
+            MultipartBodyBuilder builder = new MultipartBodyBuilder();
+            builder.part("file", audioFile.getResource());
+            builder.part("model", "whisper-1");
+
+            Map<String, Object> response = openAiWebClient.post()
+                    .uri("/audio/transcriptions")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(builder.build()))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            return (String) response.get("text");
+
+        } catch (Exception e) {
+            // STT 변환 실패 시 예외 던지지 않고 null 반환하여 오디오 전송은 성공하게 만듦
+            return null;
+        }
+    }
+
+    private void sendFamilyReactionPush(Long fromUserId, Long toUserId, String title, String content) {
+        NotificationSetting setting = notificationSettingRepository.findByUserId(toUserId).orElse(null);
+
+        // 상대방이 '가족 반응 알림'을 켜두었을 때 발송
+        if (setting != null && setting.isFamilyReactionEnabled()) {
+
+            // 누가 보냈는지 이름 찾기
+            String fromName = userRepository.findById(fromUserId)
+                    .map(User::getName).orElse("가족");
+            String finalContent = fromName + "님이 보낸 " + title;
+
+            // DB 알림 내역 저장 및 웹 푸시 전송
+            notificationService.createNotification(toUserId, NotificationType.LETTER, title, finalContent, java.time.LocalDateTime.now());
+            webPushService.sendPush(toUserId, title, finalContent);
+        }
     }
 }

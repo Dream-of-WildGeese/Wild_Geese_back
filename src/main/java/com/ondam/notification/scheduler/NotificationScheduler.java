@@ -13,7 +13,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import com.ondam.notification.service.WebPushService;
 
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -32,19 +31,14 @@ public class NotificationScheduler {
     @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void createScheduledNotifications() {
+        LocalTime now = LocalTime.now(ZoneId.of("Asia/Seoul")).withSecond(0).withNano(0);
 
-        LocalTime now = LocalTime.now(
-                ZoneId.of("Asia/Seoul")
-        ).withSecond(0).withNano(0);
-
+        // 복약 요일 확인용 today 변수
         MedicationDay today = MedicationDay.valueOf(
-                LocalDate.now(ZoneId.of("Asia/Seoul"))
-                        .getDayOfWeek()
-                        .name()
+                LocalDate.now(ZoneId.of("Asia/Seoul")).getDayOfWeek().name()
         );
 
-        List<NotificationSetting> settings =
-                notificationSettingRepository.findAll();
+        List<NotificationSetting> settings = notificationSettingRepository.findAll();
 
         // 아침 / 저녁 알림
         for (NotificationSetting setting : settings) {
@@ -66,7 +60,6 @@ public class NotificationScheduler {
                         "오늘의 아침 질문이 도착했어요."
                 );
             }
-
 
             if (setting.isEveningEnabled()
                     && setting.getEveningTime() != null

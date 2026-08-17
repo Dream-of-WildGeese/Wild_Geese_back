@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.List;
 
 public interface HealthRecordRepository extends JpaRepository<HealthRecord, Long> {
