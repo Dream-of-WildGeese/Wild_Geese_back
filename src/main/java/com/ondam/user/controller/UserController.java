@@ -5,10 +5,7 @@ import com.ondam.user.dto.request.HealthProfileUpdateRequest;
 import com.ondam.user.dto.request.NotificationSettingUpdateRequest;
 import com.ondam.user.dto.request.PushSubscriptionCreateRequest;
 import com.ondam.user.dto.request.UserCreateRequest;
-import com.ondam.user.dto.response.HealthProfileResponse;
-import com.ondam.user.dto.response.InviteCodeResponse;
-import com.ondam.user.dto.response.NotificationSettingResponse;
-import com.ondam.user.dto.response.UserCreateResponse;
+import com.ondam.user.dto.response.*;
 import com.ondam.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -111,5 +108,32 @@ public class UserController {
                 userService.getInviteCode(userId);
 
         return ApiResponse.success(response);
+    }
+
+    @Operation(
+            summary = "현재 사용자 정보 조회",
+            description = "현재 사용자의 기본 정보를 조회합니다."
+    )
+    @GetMapping("/me")
+    public ApiResponse<UserNameResponse> getMyInfo(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+
+        return ApiResponse.success(
+                userService.getMyInfo(userId)
+        );
+    }
+
+    @Operation(
+            summary = "건강 프로필 조회",
+            description = "현재 사용자의 건강 프로필을 조회합니다."
+    )
+    @GetMapping("/me/healthprofile")
+    public ApiResponse<HealthProfileResponse> getHealthProfile(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+        return ApiResponse.success(
+                userService.getHealthProfile(userId)
+        );
     }
 }
