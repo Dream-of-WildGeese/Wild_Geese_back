@@ -3,12 +3,14 @@ package com.ondam.question.controller;
 import com.ondam.global.common.ApiResponse;
 import com.ondam.question.dto.response.MorningQuestionResponse;
 import com.ondam.question.dto.response.MorningQuestionHistoryItem;
+import com.ondam.question.dto.response.MorningAnswerResponse;
 import com.ondam.question.dto.request.MorningAnswerRequest;
 import com.ondam.question.service.MorningQuestionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -48,5 +50,24 @@ public class MorningController {
             @RequestParam LocalDate from,
             @RequestParam LocalDate to) {
         return ApiResponse.success(morningQuestionService.getMorningHistory(userId, from, to));
+    }
+
+    @Operation(summary = "아침 질문 음성 답변", description = "오디오를 받아 STT로 변환 후 답변으로 즉시 저장합니다.")
+    @PostMapping(value = "/{questionId}/answers/voice", consumes = "multipart/form-data")
+    public ApiResponse<MorningAnswerResponse> submitVoiceAnswer(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long questionId,
+            @RequestParam("audioFile") MultipartFile audioFile) {
+        return ApiResponse.success(morningQuestionService.createAnswerWithStt(audioFile, questionId, userId));
+    }
+
+    @Operation(summary = "답변 리액션(이모지) 남기기", description = "이모지 문자열(예: HEART, SMILE)을 보내 반응을 추가하거나 취소(토글)합니다.")
+    @PostMapping("/answers/{answerId}/reactions")
+    public ApiResponse<Void> toggleReaction(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long answerId,
+            @RequestParam String emoji) {
+        morningQuestionService.toggleReaction(userId, answerId, emoji);
+        return ApiResponse.success(null);
     }
 }

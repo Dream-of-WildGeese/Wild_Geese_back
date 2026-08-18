@@ -9,6 +9,7 @@ import com.ondam.letter.entity.Letter;
 import com.ondam.letter.repository.LetterRepository;
 import com.ondam.letter.dto.request.LetterSendRequest;
 import com.ondam.letter.dto.response.LetterResponse;
+import com.ondam.letter.dto.response.LetterVoiceResponse;
 import com.ondam.question.entity.InputType;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
@@ -45,16 +46,15 @@ public class LetterService {
 
     @Transactional
     public void sendLetter(Long fromUserId, LetterSendRequest request) {
-
         Letter letter = Letter.builder()
                 .fromUserId(fromUserId)
                 .toUserId(request.toUserId())
                 .content(request.content())
                 .inputType(request.inputType())
+                .audioUrl(request.audioUrl())
                 .build();
 
         letterRepository.save(letter);
-
         sendFamilyReactionPush(fromUserId, request.toUserId(), "새로운 편지가 도착했어요!", "가족이 보낸 따뜻한 편지를 확인해보세요.");
     }
 
@@ -158,25 +158,10 @@ public class LetterService {
         letterRepository.save(letter);
     }
 
-    @Transactional
-    public void sendVoiceLetter(Long fromUserId, Long toUserId, MultipartFile audioFile) {
-
+    public LetterVoiceResponse uploadAndTranscribeVoice(MultipartFile audioFile) {
         String audioUrl = s3Uploader.upload(audioFile, "letters");
-
         String transcribedText = callWhisperApi(audioFile);
-
-        // TODO: STT로 content도 채울 수 있으면 좋지만, 지금은 생략(비워둠)
-        Letter letter = Letter.builder()
-                .fromUserId(fromUserId)
-                .toUserId(toUserId)
-                .content(transcribedText)
-                .inputType(InputType.VOICE)
-                .audioUrl(audioUrl)
-                .build();
-
-        letterRepository.save(letter);
-
-        sendFamilyReactionPush(fromUserId, toUserId, "새로운 음성 편지가 도착했어요!", "가족이 보낸 따뜻한 목소리를 들어보세요.");
+        return new LetterVoiceResponse(audioUrl, transcribedText);
     }
 
     // STT API 호출 메서드

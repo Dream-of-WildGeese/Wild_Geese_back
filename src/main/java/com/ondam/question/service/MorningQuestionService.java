@@ -9,6 +9,8 @@ import com.ondam.global.common.DateUtils;
 import com.ondam.global.util.GptClient;
 import com.ondam.question.entity.MorningQuestion;
 import com.ondam.question.entity.MorningAnswer;
+import com.ondam.question.entity.MorningReaction;
+import com.ondam.question.repository.MorningReactionRepository;
 import com.ondam.question.repository.MorningQuestionRepository;
 import com.ondam.question.repository.MorningAnswerRepository;
 import com.ondam.question.dto.request.MorningAnswerRequest;
@@ -42,6 +44,7 @@ public class MorningQuestionService {
     private final NotificationService notificationService;
     private final NotificationSettingRepository notificationSettingRepository;
     private final WebPushService webPushService;
+    private final MorningReactionRepository morningReactionRepository;
 
     private final GptClient gptClient;
 
@@ -230,5 +233,24 @@ public class MorningQuestionService {
         }
 
         return result;
+    }
+
+    @Transactional
+    public void toggleReaction(Long userId, Long answerId, String emoji) {
+        Optional<MorningReaction> existing = morningReactionRepository
+                .findByMorningAnswerIdAndUserIdAndEmoji(answerId, userId, emoji);
+
+        if (existing.isPresent()) {
+            // 이미 누른 이모지면 삭제 (토글 오프)
+            morningReactionRepository.delete(existing.get());
+        } else {
+            // 안 누른 거면 새로 추가 (토글 온)
+            MorningReaction reaction = MorningReaction.builder()
+                    .morningAnswerId(answerId)
+                    .userId(userId)
+                    .emoji(emoji)
+                    .build();
+            morningReactionRepository.save(reaction);
+        }
     }
 }

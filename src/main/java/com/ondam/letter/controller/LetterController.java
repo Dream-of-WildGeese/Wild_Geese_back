@@ -3,6 +3,7 @@ package com.ondam.letter.controller;
 import com.ondam.global.common.ApiResponse;
 import com.ondam.letter.dto.request.LetterSendRequest;
 import com.ondam.letter.dto.response.LetterResponse;
+import com.ondam.letter.dto.response.LetterVoiceResponse;
 import com.ondam.letter.service.LetterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,14 +58,10 @@ public class LetterController {
         return ApiResponse.success(null);
     }
 
-    @Operation(summary = "음성 편지 보내기", description = "음성 파일을 업로드해서 편지로 저장합니다. 오디오 원본이 보관됩니다.")
+    @Operation(summary = "음성 편지 변환 (전송X)", description = "음성을 STT 변환하고 오디오 URL을 반환합니다. 이 결과를 받아 최종 /letters API로 편지를 보냅니다.")
     @PostMapping(value = "/voice", consumes = "multipart/form-data")
-    public ApiResponse<Void> sendVoiceLetter(
-            @RequestHeader("X-User-Id") Long fromUserId,
-            @RequestParam Long toUserId,
+    public ApiResponse<LetterVoiceResponse> uploadVoiceLetter(
             @RequestParam MultipartFile audioFile) {
-        letterService.sendVoiceLetter(fromUserId, toUserId, audioFile);
-        return ApiResponse.success(null);
-
+        return ApiResponse.success(letterService.uploadAndTranscribeVoice(audioFile));
     }
 }
