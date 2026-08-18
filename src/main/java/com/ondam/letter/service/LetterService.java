@@ -14,6 +14,7 @@ import com.ondam.question.entity.InputType;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import com.ondam.global.util.S3Uploader;
+import com.ondam.global.util.SttClient;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +43,7 @@ public class LetterService {
     private final NotificationSettingRepository notificationSettingRepository;
     private final WebPushService webPushService;
 
-    private final WebClient openAiWebClient;
+    private final SttClient sttClient;
 
     @Transactional
     public void sendLetter(Long fromUserId, LetterSendRequest request) {
@@ -161,31 +162,8 @@ public class LetterService {
 
     public LetterVoiceResponse uploadAndTranscribeVoice(MultipartFile audioFile) {
         String audioUrl = s3Uploader.upload(audioFile, "letters");
-        String transcribedText = callWhisperApi(audioFile);
-        return new LetterVoiceResponse(audioUrl, transcribedText);
-    }
-
-    // STT API 호출 메서드
-    private String callWhisperApi(MultipartFile audioFile) {
-        try {
-            MultipartBodyBuilder builder = new MultipartBodyBuilder();
-            builder.part("file", audioFile.getResource());
-            builder.part("model", "whisper-1");
-
-            Map<String, Object> response = openAiWebClient.post()
-                    .uri("/audio/transcriptions")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(builder.build()))
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block(Duration.ofSeconds(15));
-
-            return (String) response.get("text");
-
-        } catch (Exception e) {
-            // STT 변환 실패 시 예외 던지지 않고 null 반환하여 오디오 전송은 성공하게 만듦
-            return null;
-        }
+        String transcript = sttClient.transcribe(audioFile);
+        return new LetterVoiceResponse(audioUrl, transcript);
     }
 
     private void sendFamilyReactionPush(Long fromUserId, Long toUserId, String title, String content) {

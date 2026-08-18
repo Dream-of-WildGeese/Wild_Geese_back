@@ -7,6 +7,7 @@ import com.ondam.user.entity.NotificationSetting;
 import com.ondam.user.repository.NotificationSettingRepository;
 import com.ondam.global.common.DateUtils;
 import com.ondam.global.util.GptClient;
+import com.ondam.global.util.SttClient;
 import com.ondam.global.util.S3Uploader;
 import com.ondam.question.entity.MorningQuestion;
 import com.ondam.question.entity.MorningAnswer;
@@ -58,7 +59,7 @@ public class MorningQuestionService {
 
     private final GptClient gptClient;
     private final S3Uploader s3Uploader;
-    private final WebClient openAiWebClient;
+    private final SttClient sttClient;
 
     public MorningQuestionResponse getTodayQuestion(Long userId) {
         // 1. userId로 User 조회 → Family 얻기
@@ -282,12 +283,12 @@ public class MorningQuestionService {
     @Transactional
     public MorningAnswerResponse createAnswerWithStt(MultipartFile audioFile, Long questionId, Long userId) {
         String audioUrl = s3Uploader.upload(audioFile, "morning-answers");
-        String transcribedText = callWhisperApi(audioFile);
+        String transcript = sttClient.transcribe(audioFile);
 
         MorningAnswer answer = MorningAnswer.builder()
                 .morningQuestionId(questionId)
                 .userId(userId)
-                .textValue(transcribedText)
+                .textValue(transcript)
                 .inputType(InputType.VOICE)
                 .answeredAt(LocalDateTime.now())
                 .audioUrl(audioUrl)
@@ -300,25 +301,5 @@ public class MorningQuestionService {
                 savedAnswer.getAudioUrl(),
                 savedAnswer.getTextValue()
         );
-    }
-
-    private String callWhisperApi(MultipartFile audioFile) {
-        try {
-            MultipartBodyBuilder builder = new MultipartBodyBuilder();
-            builder.part("file", audioFile.getResource());
-            builder.part("model", "whisper-1");
-
-            Map<String, Object> response = openAiWebClient.post()
-                    .uri("/audio/transcriptions")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(builder.build()))
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block(Duration.ofSeconds(15));
-
-            return (String) response.get("text");
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

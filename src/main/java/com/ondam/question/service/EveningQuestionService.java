@@ -5,6 +5,7 @@ import com.ondam.notification.service.NotificationService;
 import com.ondam.notification.service.WebPushService;
 import com.ondam.global.common.DateUtils;
 import com.ondam.global.util.GptClient;
+import com.ondam.global.util.SttClient;
 import com.ondam.global.exception.BusinessException;
 import com.ondam.global.exception.ErrorCode;
 import com.ondam.question.entity.EveningQuestion;
@@ -68,8 +69,8 @@ public class EveningQuestionService {
     private final HealthProfileRepository healthProfileRepository;
 
     private final DailyLogService dailyLogService;
-    private final WebClient openAiWebClient;
     private final GptClient gptClient;
+    private final SttClient sttClient;
 
     private final WeeklyReportService weeklyReportService;
     private final UserRepository userRepository;
@@ -326,29 +327,8 @@ public class EveningQuestionService {
     }
 
     public VoiceTranscribeResponse transcribe(Long questionId, MultipartFile audioFile) {
-        String transcript = callWhisperApi(audioFile);
+        String transcript = sttClient.transcribe(audioFile);
         return new VoiceTranscribeResponse(transcript);
-    }
-
-    private String callWhisperApi(MultipartFile audioFile) {
-        try {
-            MultipartBodyBuilder builder = new MultipartBodyBuilder();
-            builder.part("file", audioFile.getResource());
-            builder.part("model", "whisper-1");
-
-            Map<String, Object> response = openAiWebClient.post()
-                    .uri("/audio/transcriptions")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(builder.build()))
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block(Duration.ofSeconds(15));
-
-            return (String) response.get("text");
-
-        } catch (Exception e) {
-            throw new RuntimeException("음성 인식 실패", e);
-        }
     }
 
     private String generateCustomQuestionByAi(Long userId) {
