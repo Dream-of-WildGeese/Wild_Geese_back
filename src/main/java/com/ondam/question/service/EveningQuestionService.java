@@ -382,26 +382,46 @@ public class EveningQuestionService {
                 topicType = "없음";
             }
 
+            LocalDate today = DateUtils.today();
+            Optional<EveningQuestion> lastQuestionOpt = eveningQuestionRepository
+                    .findFirstByUserIdAndMetricTypeAndQuestionDateBeforeOrderByQuestionDateDesc(userId, MetricType.CUSTOM, today);
+
+            String previousContext = "";
+            if (lastQuestionOpt.isPresent()) {
+                Optional<EveningAnswer> lastAnswerOpt = eveningAnswerRepository
+                        .findByEveningQuestionIdAndUserId(lastQuestionOpt.get().getId(), userId);
+
+                // 이전 답변 중 텍스트(STT 등) 기록이 존재한다면 프롬프트에 추가
+                if (lastAnswerOpt.isPresent() && lastAnswerOpt.get().getTextValue() != null) {
+                    previousContext = String.format("\n[이전 답변 기록]\n지난번(%s)에 사용자는 '%s'라는 질문에 다음과 같이 답했습니다: '%s'\n",
+                            lastQuestionOpt.get().getQuestionDate(),
+                            lastQuestionOpt.get().getContent(),
+                            lastAnswerOpt.get().getTextValue());
+                }
+            }
+
             String prompt = String.format("""
-                당신은 어르신을 위한 건강 체크 앱의 질문 작성자입니다.
+                당신은 어르신을 위한 건강 체크 앱의 다정한 질문 작성자입니다.
 
                 다음 순서로 작업해주세요.
+                
+                1단계: 이 사용자의 %s는 '%s'입니다. %s
+                이것을 관리하거나 챙길 때 일상에서 특히 신경 써야 할 부분이 무엇인지 생각해보세요.
 
-                1단계: 이 사용자의 %s는 '%s'입니다. 이것을 관리하거나 챙길 때 일상에서 특히 신경 써야 할 부분이 무엇인지 생각해보세요.
+                2단계: 1단계 정보를 바탕으로 아래 기준에 따라 질문의 방향을 결정하세요.
+                - [이전 답변 기록]이 있는 경우: 지난 답변 내용을 자연스럽게 언급하며(예: "지난번에 무릎이 아프다고 하셨는데..."), 그 증상이나 상태가 오늘은 어떤지 확인하는 '꼬리물기 질문'을 만드세요.
+                - [이전 답변 기록]이 없는 경우: 다음 두 가지 중 더 적합한 쪽을 하나만 고르세요.
+                  방향 A: 질환/관심사와 관련된 증상이나 불편한 변화가 오늘 있었는지 확인하는 질문
+                  방향 B: 관리나 개선에 도움 되는 특정 행동을 오늘 실천했는지 확인하는 질문
 
-                2단계: 1단계에서 찾은 정보를 바탕으로, 다음 두 가지 중 하나의 방향으로 질문을 만드세요.
-                - 방향 A: 이와 관련된 증상이나 변화가 오늘 있었는지 확인하는 질문
-                - 방향 B: 관리나 개선에 도움되는 특정 행동을 오늘 실천했는지 확인하는 질문
-                두 방향 중 더 적합한 쪽을 하나만 골라서 질문을 만드세요.
+                3단계: 결정된 내용을 따뜻하고 부담 없는 말투로, 단 한 문장으로 다듬어서 최종 작성하세요.
 
-                3단계: 그 질문을 따뜻하고 부담 없는 말투로, 한 문장으로만 다듬어서 최종 작성하세요.
-
-                최종 결과 형식:
-                - "오늘 ~하셨나요?" 형태의 사실 확인 질문으로 작성하세요. (예: "오늘 짠 음식을 얼마나 드셨는지 편하게 말씀해주세요.")
-                - "괜찮으세요?", "걱정되지 않으세요?" 같은 감정을 묻는 질문은 피하세요.
-                - 여러 개면, 그중 가장 중요한 것 하나만 골라서 질문하세요.
-                - 최종 질문 문장 하나만 출력하고, 1~3단계 과정이나 다른 설명은 절대 출력하지 마세요.
-                """, topicType, topic);
+                [최종 결과 형식 규칙]
+                - "오늘 ~하셨나요?", "~는 좀 어떠신가요?" 형태의 사실 확인이나 구체적인 안부 질문으로 작성하세요. (예: "오늘 짠 음식을 얼마나 드셨는지 편하게 말씀해주세요.")
+                - "괜찮으세요?", "걱정되지 않으세요?" 같이 막연한 불안감을 유발하거나 감정을 묻는 표현은 절대 피하세요.
+                - 질문을 여러 개 던지지 말고, 가장 중요한 것 딱 하나만 물어보세요.
+                - 최종 질문 문장 하나만 출력하고, 1~3단계 사고 과정이나 부가 설명, 인사말, 따옴표는 절대 출력하지 마세요.
+                """, topicType, topic, previousContext);
 
             return gptClient.ask(prompt).trim();
 
