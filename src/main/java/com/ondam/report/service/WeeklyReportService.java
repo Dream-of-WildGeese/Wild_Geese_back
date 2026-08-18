@@ -31,7 +31,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Comparator;
+import java.util.TreeMap;
+import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -285,49 +286,59 @@ public class WeeklyReportService {
 
         List<MetricType> types = List.of(MetricType.CONDITION, MetricType.SLEEP, MetricType.MEAL, MetricType.ACTIVITY);
 
-        StringBuilder dataTable = new StringBuilder();
+        Map<LocalDate, Map<MetricType, BigDecimal>> byDate = new TreeMap<>();
         int totalRecordCount = 0;
 
         for (MetricType type : types) {
             List<HealthRecord> records = healthRecordRepository
                     .findByUserIdAndMetricTypeAndRecordDateBetween(userId, type, twoWeeksStart, twoWeeksEnd);
 
-            // 날짜순 정렬
-            records.sort(Comparator.comparing(HealthRecord::getRecordDate));
             totalRecordCount += records.size();
 
-            dataTable.append(type.toString()).append(": ");
             for (HealthRecord r : records) {
-                dataTable.append(r.getRecordDate())
-                        .append("=")
-                        .append(r.getNumericValue())
-                        .append(" ");
+                byDate.computeIfAbsent(r.getRecordDate(), d -> new HashMap<>())
+                        .put(type, r.getNumericValue());
             }
-            dataTable.append("\n");
         }
 
-        // 데이터가 너무 적으면(예: 6일 미만) 인사이트 생략
+        // 데이터가 너무 적으면 인사이트 생략
         if (totalRecordCount < 20) {
             return "아직 패턴을 분석할 만큼 기록이 쌓이지 않았어요. 조금 더 기록을 쌓아보세요.";
+        }
+
+        StringBuilder dataText = new StringBuilder();
+        for (Map.Entry<LocalDate, Map<MetricType, BigDecimal>> entry : byDate.entrySet()) {
+            dataText.append(entry.getKey()).append(": ");
+            Map<MetricType, BigDecimal> values = entry.getValue();
+            List<String> parts = new ArrayList<>();
+            for (MetricType type : types) {
+                if (values.containsKey(type)) {
+                    parts.add(type + "=" + values.get(type));
+                }
+            }
+            dataText.append(String.join(", ", parts)).append("\n");
         }
 
         try {
             String prompt = String.format("""
                 당신은 어르신 건강 데이터를 분석하는 AI 웰니스 코치입니다.
-                다음은 최근 2주간의 건강 기록입니다 (날짜=점수, 점수가 높을수록 좋은 상태).
+                다음은 최근 2주간, 날짜별 건강 점수입니다 (1~3점, 높을수록 좋은 상태).
+                CONDITION=컨디션, SLEEP=수면, MEAL=식사, ACTIVITY=활동량
 
                 %s
 
-                이 데이터를 보고, 지표들 사이의 관계나 반복되는 패턴을 하나 찾아서 설명해주세요.
-                예: 특정 지표가 낮았던 날 다음날 다른 지표도 낮아지는 경향, 특정 요일에 반복되는 패턴 등.
+                이 데이터에서, 다음 중 가장 뚜렷하게 확인되는 패턴 하나를 찾아 설명해주세요.
+                - 여러 지표가 같은 날 함께 낮았던 경우
+                - 최근으로 갈수록 특정 지표가 계속 낮아지거나 높아지는 추세
+                - 특정 요일에 반복되는 패턴
 
                 규칙:
-                - 실제 데이터에서 확인되는 패턴만 말하세요. 없는 패턴을 지어내지 마세요.
-                - 뚜렷한 패턴이 없으면 "특별한 패턴은 보이지 않지만, 전반적으로 꾸준히 기록해주고 계세요" 같은 문장으로 답하세요.
+                - 반드시 데이터에 실제로 나타나는 날짜와 수치를 근거로 말하세요. 데이터에 없는 내용은 말하지 마세요.
+                - 뚜렷한 패턴이 없으면 "특별한 패턴은 보이지 않지만, 전반적으로 꾸준히 기록해주고 계세요"라고만 답하세요.
                 - 의학적 진단이나 원인 단정은 하지 마세요. "~한 경향이 보여요" 정도로만 표현하세요.
                 - 두 문장 이내, 존댓말로, 따뜻한 어투로 작성하세요.
-                - 패턴 설명 외에 다른 말은 하지 마세요.
-                """, dataTable.toString());
+                - 패턴 설명 외에 다른 말은 절대 출력하지 마세요.
+                """, dataText.toString());
 
             return gptClient.ask(prompt).trim();
 

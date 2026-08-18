@@ -160,8 +160,7 @@ public class HealthCheckupService {
 
         } catch (Exception e) {
             return List.of(
-                    "최근 작성하신 건강 일지에서 특별한 이상 징후는 발견되지 않았어요.",
-                    "평소 불편하셨던 부위가 있다면 진료 시 편하게 말씀해보세요."
+                    "지금은 분석을 불러올 수 없어요. 잠시 후 다시 확인해주세요."
             );
         }
     }
