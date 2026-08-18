@@ -7,6 +7,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
 import java.util.Map;
+import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
@@ -31,10 +32,10 @@ public class GptClient {
                 .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(Map.class)
-                .block();
+                .block(Duration.ofSeconds(15));   // ← 추가
 
         List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
-        Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
+            Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
 
         return (String) message.get("content");
     }

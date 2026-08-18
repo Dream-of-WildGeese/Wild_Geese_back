@@ -9,4 +9,5 @@ import java.util.List;
 public interface QuestionTemplateRepository extends JpaRepository<QuestionTemplate, Long> {
     List<QuestionTemplate> findByMetricTypeAndIsActiveTrue(MetricType metricType);
     List<QuestionTemplate> findByMetricTypeAndTargetDiseaseAndIsActiveTrue(MetricType metricType, String targetDisease);
+    List<QuestionTemplate> findByMetricTypeAndTargetDiseaseIsNullAndIsActiveTrue(MetricType metricType);
 }

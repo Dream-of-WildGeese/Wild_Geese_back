@@ -94,9 +94,18 @@ public class HealthCheckupService {
     }
 
     @Transactional
+    public void updateCheckup(Long userId, Long checkupId, HealthCheckupRequest request) {
+        HealthCheckup checkup = healthCheckupRepository.findByIdAndUserId(checkupId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHECKUP_NOT_FOUND));
+
+        // isCompleted는 null로 넘겨서 기존 상태를 유지하게 함
+        checkup.update(request.checkupDate(), request.checkupType(), request.hospitalName(), null);
+    }
+
+    @Transactional
     public void deleteCheckup(Long userId, Long checkupId) {
         HealthCheckup checkup = healthCheckupRepository.findByIdAndUserId(checkupId, userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHECKUP_NOT_FOUND)); // USER_NOT_FOUND -> CHECKUP_NOT_FOUND 변경!
         healthCheckupRepository.delete(checkup);
     }
 

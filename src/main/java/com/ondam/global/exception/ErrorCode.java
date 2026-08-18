@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
     FAMILY_NOT_FOUND(HttpStatus.NOT_FOUND, "가족을 찾을 수 없습니다."),
+    CHECKUP_NOT_FOUND(HttpStatus.NOT_FOUND, "검진 일정을 찾을 수 없습니다."),
+    TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "질문 템플릿을 찾을 수 없습니다."),
     ALREADY_JOINED(HttpStatus.CONFLICT, "이미 가족에 속해 있습니다."),
     ALREADY_ANSWERED(HttpStatus.CONFLICT, "이미 답변한 질문입니다."),
     QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "오늘의 질문이 아직 생성되지 않았습니다."),

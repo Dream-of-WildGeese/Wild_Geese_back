@@ -20,6 +20,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -43,6 +44,7 @@ public class WeeklyReportService {
     private final ObjectMapper objectMapper;
     private final GptClient gptClient;
 
+    @Transactional
     public WeeklyReportResponse getWeeklyReport(Long userId, LocalDate weekStartDate) {
 
         // 1. 이번 주 월요일~일요일 날짜 계산

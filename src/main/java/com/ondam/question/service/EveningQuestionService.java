@@ -5,6 +5,8 @@ import com.ondam.notification.service.NotificationService;
 import com.ondam.notification.service.WebPushService;
 import com.ondam.global.common.DateUtils;
 import com.ondam.global.util.GptClient;
+import com.ondam.global.exception.BusinessException;
+import com.ondam.global.exception.ErrorCode;
 import com.ondam.question.entity.EveningQuestion;
 import com.ondam.question.entity.EveningAnswer;
 import com.ondam.question.entity.MetricType;
@@ -45,12 +47,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.math.BigDecimal;
 import java.util.Map;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -87,8 +90,18 @@ public class EveningQuestionService {
         return buildResponse(questions, userId);
     }
 
-    @Transactional
     public void submitAnswers(Long userId, EveningAnswerSubmitRequest request) {
+
+        saveAnswers(userId, request);   // 트랜잭션 있는 저장 로직만
+
+        LocalDate today = DateUtils.today();
+        if (today.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            notifyWeeklyReportToFamily(userId, today);   // 트랜잭션 없이, DB 저장 끝난 뒤에 실행
+        }
+    }
+
+    @Transactional
+    public void saveAnswers(Long userId, EveningAnswerSubmitRequest request) {
 
         for (EveningAnswerSubmitRequest.AnswerItem item : request.answers()) {
 
@@ -154,38 +167,27 @@ public class EveningQuestionService {
         }
 
         dailyLogService.refresh(userId, DateUtils.today());
+    }
 
-        // ▼ 2. 일요일인 경우 주간 리포트 즉시 생성 및 가족 교차 알림
-        LocalDate today = DateUtils.today();
-        if (today.getDayOfWeek() == DayOfWeek.SUNDAY) {
+    public void notifyWeeklyReportToFamily(Long userId, LocalDate today) {
 
-            // 본인의 주간 리포트 생성 (getWeeklyReport 내부에 생성/저장 로직이 이미 있음)
-            weeklyReportService.getWeeklyReport(userId, today);
+        weeklyReportService.getWeeklyReport(userId, today);
 
-            // 가족 조회
-            User me = userRepository.findById(userId).orElseThrow();
-            Long familyId = me.getFamily().getId();
-            List<User> familyMembers = userRepository.findAllByFamilyId(familyId);
+        User me = userRepository.findById(userId).orElseThrow();
+        Long familyId = me.getFamily().getId();
+        List<User> familyMembers = userRepository.findAllByFamilyId(familyId);
 
-            for (User member : familyMembers) {
-                // 본인이 아닌 가족 구성원(부모 ↔ 자녀)에게만 발송
-                if (!member.getId().equals(userId)) {
-                    NotificationSetting setting = notificationSettingRepository.findByUserId(member.getId()).orElse(null);
+        for (User member : familyMembers) {
+            if (!member.getId().equals(userId)) {
+                NotificationSetting setting = notificationSettingRepository.findByUserId(member.getId()).orElse(null);
 
-                    // 상대방이 리포트 알림을 켜둔 경우에만 푸시
-                    if (setting != null && setting.isReportEnabled()) {
-                        String title = "가족 주간 리포트 도착";
-                        String content = me.getName() + "님의 이번 주 건강 리포트가 완성되었어요. 확인해보세요!";
+                if (setting != null && setting.isReportEnabled()) {
+                    String title = "가족 주간 리포트 도착";
+                    String content = me.getName() + "님의 이번 주 건강 리포트가 완성되었어요. 확인해보세요!";
 
-                        notificationService.createNotification(
-                                member.getId(),
-                                NotificationType.WEEKLY_REPORT,
-                                title,
-                                content,
-                                LocalDateTime.now()
-                        );
-                        webPushService.sendPush(member.getId(), title, content);
-                    }
+                    notificationService.createNotification(
+                            member.getId(), NotificationType.WEEKLY_REPORT, title, content, LocalDateTime.now());
+                    webPushService.sendPush(member.getId(), title, content);
                 }
             }
         }
@@ -218,6 +220,11 @@ public class EveningQuestionService {
 
             } else {
                 List<QuestionTemplate> candidates = questionTemplateRepository.findByMetricTypeAndIsActiveTrue(type);
+
+                if (candidates.isEmpty()) {
+                    continue;
+                }
+
                 QuestionTemplate template = candidates.get(0);
 
                 question = EveningQuestion.builder()
@@ -271,7 +278,7 @@ public class EveningQuestionService {
         return EveningQuestionResponse.builder()
                 .questionDate(questions.get(0).getQuestionDate().toString())
                 .completedCount(completedCount)
-                .totalCount(5)
+                .totalCount(questions.size())
                 .questions(items)
                 .build();
     }
@@ -309,7 +316,13 @@ public class EveningQuestionService {
             }
         }
 
-        List<QuestionTemplate> fallback = questionTemplateRepository.findByMetricTypeAndIsActiveTrue(type);
+        List<QuestionTemplate> fallback = questionTemplateRepository
+                .findByMetricTypeAndTargetDiseaseIsNullAndIsActiveTrue(type);
+
+        if (fallback.isEmpty()) {
+            throw new BusinessException(ErrorCode.TEMPLATE_NOT_FOUND);
+        }
+
         return fallback.get(0);
     }
 
@@ -330,7 +343,7 @@ public class EveningQuestionService {
                     .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()
                     .bodyToMono(Map.class)
-                    .block();
+                    .block(Duration.ofSeconds(15));
 
             return (String) response.get("text");
 
