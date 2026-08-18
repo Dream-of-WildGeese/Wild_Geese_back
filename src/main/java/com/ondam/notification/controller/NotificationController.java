@@ -3,6 +3,7 @@ package com.ondam.notification.controller;
 import com.ondam.global.common.ApiResponse;
 import com.ondam.notification.dto.response.NotificationResponse;
 import com.ondam.notification.service.NotificationService;
+import com.ondam.notification.service.WebPushService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final WebPushService webPushService;
 
     @Operation(
             summary = "알림 목록 조회",
@@ -50,6 +52,21 @@ public class NotificationController {
         notificationService.readNotification(
                 userId,
                 notificationId
+        );
+
+        return ApiResponse.success(null);
+    }
+
+    @Operation(summary = "Web Push 테스트")
+    @PostMapping("/test-push")
+    public ApiResponse<Void> testPush(
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+
+        webPushService.sendPush(
+                userId,
+                "온담 테스트 알림",
+                "Web Push 테스트에 성공했어요!"
         );
 
         return ApiResponse.success(null);

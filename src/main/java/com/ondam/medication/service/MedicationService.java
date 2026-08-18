@@ -206,9 +206,8 @@ public class MedicationService {
                                                     schedule.getId(),
                                                     date
                                             )
-                                            .isPresent()
-                                            ? MedicationLogStatus.TAKEN
-                                            : MedicationLogStatus.NOT_RECORDED;
+                                            .map(MedicationLog::getStatus)
+                                            .orElse(MedicationLogStatus.NOT_RECORDED);
                             return new MedicationLogResponse.MedicationLogItem(
                                     schedule.getMedication().getId(),
                                     schedule.getId(),
