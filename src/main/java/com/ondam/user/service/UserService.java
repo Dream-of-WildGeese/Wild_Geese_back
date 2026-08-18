@@ -182,13 +182,25 @@ public class UserService {
                         new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        // 이미 등록된 endpoint라면 중복 저장하지 않음
-        if (pushSubscriptionRepository
-                .findByEndpoint(request.endpoint())
-                .isPresent()) {
+        // 이미 같은 endpoint가 존재하면
+        PushSubscription existingSubscription =
+                pushSubscriptionRepository
+                        .findByEndpoint(request.endpoint())
+                        .orElse(null);
+
+        if (existingSubscription != null) {
+
+            // 현재 사용자와 최신 key 정보로 갱신
+            existingSubscription.update(
+                    user,
+                    request.p256dh(),
+                    request.auth()
+            );
+
             return;
         }
 
+        // 처음 보는 endpoint라면 새로 저장
         PushSubscription subscription =
                 new PushSubscription(
                         user,

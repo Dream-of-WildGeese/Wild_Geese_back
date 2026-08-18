@@ -18,3 +18,8 @@ aws:
 openai:
   api-key: ${OPENAI_API_KEY}
   model: gpt-4o-mini
+
+webpush:
+  public-key: ${VAPID_PUBLIC_KEY}
+  private-key: ${VAPID_PRIVATE_KEY}
+  subject: mailto:stella2810@naver.com

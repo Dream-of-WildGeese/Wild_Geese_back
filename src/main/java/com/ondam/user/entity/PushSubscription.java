@@ -40,4 +40,13 @@ public class PushSubscription extends BaseTimeEntity {
         this.p256dh = p256dh;
         this.auth = auth;
     }
+    public void update(
+            User user,
+            String p256dh,
+            String auth
+    ) {
+        this.user = user;
+        this.p256dh = p256dh;
+        this.auth = auth;
+    }
 }

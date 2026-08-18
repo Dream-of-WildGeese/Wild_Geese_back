@@ -65,33 +65,63 @@ public class WebPushService {
 
             for (PushSubscription subscription : subscriptions) {
 
-                System.out.println(
-                        "Push endpoint = " + subscription.getEndpoint()
-                );
+                try {
 
-                Notification notification =
-                        new Notification(
-                                subscription.getEndpoint(),
-                                subscription.getP256dh(),
-                                subscription.getAuth(),
-                                payload.getBytes(StandardCharsets.UTF_8)
+                    System.out.println(
+                            "Push endpoint = " +
+                                    subscription.getEndpoint()
+                    );
+
+                    Notification notification =
+                            new Notification(
+                                    subscription.getEndpoint(),
+                                    subscription.getP256dh(),
+                                    subscription.getAuth(),
+                                    payload.getBytes(StandardCharsets.UTF_8)
+                            );
+
+                    HttpResponse response =
+                            pushService.send(notification);
+
+                    int statusCode =
+                            response.getStatusLine().getStatusCode();
+
+                    System.out.println(
+                            "Push 응답 코드 = " + statusCode
+                    );
+
+                    System.out.println(
+                            "Push 응답 상태 = " +
+                                    response.getStatusLine()
+                    );
+
+                    // 만료된 Push 구독
+                    if (statusCode == 404 || statusCode == 410) {
+
+                        System.out.println(
+                                "만료된 Push 구독 삭제"
                         );
 
-                HttpResponse response = pushService.send(notification);
+                        pushSubscriptionRepository
+                                .delete(subscription);
+                    }
 
-                System.out.println(
-                        "Push 응답 코드 = " +
-                                response.getStatusLine().getStatusCode()
-                );
+                } catch (Exception e) {
 
-                System.out.println(
-                        "Push 응답 상태 = " +
-                                response.getStatusLine()
-                );
+                    System.out.println(
+                            "해당 구독 Push 전송 실패"
+                    );
+
+                    e.printStackTrace();
+                }
             }
 
         } catch (Exception e) {
-            System.out.println("Push 전송 실패");
+
+            System.out.println(
+                    "PushService 초기화 실패"
+            );
+
             e.printStackTrace();
         }
     }
