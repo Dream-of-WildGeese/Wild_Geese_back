@@ -7,5 +7,5 @@ import java.util.Optional;
 
 public interface EveningAnswerRepository extends JpaRepository<EveningAnswer, Long> {
 
-    Optional<EveningAnswer> findByEveningQuestionIdAndUserId(Long eveningQuestionId, Long userId);
+    Optional<EveningAnswer> findFirstByEveningQuestionIdAndUserId(Long questionId, Long userId);
 }

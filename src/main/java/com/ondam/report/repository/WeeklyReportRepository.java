@@ -9,5 +9,5 @@ import java.util.Optional;
 public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long> {
 
     Optional<WeeklyReport> findByUserIdAndWeekStartDate(Long userId, LocalDate weekStartDate);
-
+    List<WeeklyReport> findByUserIdOrderByWeekStartDateDesc(Long userId);
 }

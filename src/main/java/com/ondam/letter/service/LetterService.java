@@ -15,7 +15,6 @@ import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import com.ondam.global.util.S3Uploader;
 
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -27,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.web.reactive.function.BodyInserters;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 
@@ -146,6 +146,7 @@ public class LetterService {
         });
     }
 
+    @Transactional
     public void markAsRead(Long letterId) {
 
         // 1. letterId로 Letter 조회 (없으면 예외)
@@ -177,7 +178,7 @@ public class LetterService {
                     .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()
                     .bodyToMono(Map.class)
-                    .block();
+                    .block(Duration.ofSeconds(15));
 
             return (String) response.get("text");
 

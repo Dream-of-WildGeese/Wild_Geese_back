@@ -3,6 +3,7 @@ package com.ondam.report.controller;
 import com.ondam.global.common.ApiResponse;
 import com.ondam.report.dto.response.WeeklyReportResponse;
 import com.ondam.report.service.WeeklyReportService;
+import com.ondam.report.dto.response.WeeklyReportHistoryItem;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Tag(name = "주간 리포트", description = "이번 주 건강 변화를 요약해서 보여주는 API")
 @RestController
@@ -41,5 +43,12 @@ public class WeeklyReportController {
     public ApiResponse<WeeklyReportResponse> getFamilyLatestReport(
             @PathVariable Long userId) {
         return ApiResponse.success(weeklyReportService.getWeeklyReport(userId, null));
+    }
+
+    @Operation(summary = "주간 리포트 이력 조회", description = "이 사용자의 모든 주차별 리포트 한줄평을 최신순으로 조회합니다.")
+    @GetMapping("/history")
+    public ApiResponse<List<WeeklyReportHistoryItem>> getWeeklyReportHistory(
+            @RequestHeader("X-User-Id") Long userId) {
+        return ApiResponse.success(weeklyReportService.getWeeklyReportHistory(userId));
     }
 }

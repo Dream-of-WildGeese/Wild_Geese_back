@@ -117,7 +117,7 @@ public class HealthCheckupService {
 
         List<String> logs = new ArrayList<>();
         for (EveningQuestion q : customQuestions) {
-            Optional<EveningAnswer> answerOpt = eveningAnswerRepository.findByEveningQuestionIdAndUserId(q.getId(), userId);
+            Optional<EveningAnswer> answerOpt = eveningAnswerRepository.findFirstByEveningQuestionIdAndUserId(q.getId(), userId);
             if (answerOpt.isPresent()) {
                 EveningAnswer a = answerOpt.get();
                 String text = a.getTextValue() != null ? a.getTextValue() : a.getChoiceValue();

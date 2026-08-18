@@ -4,6 +4,7 @@ import lombok.Builder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.List;
 
 @Builder
 public record WeeklyReportResponse(

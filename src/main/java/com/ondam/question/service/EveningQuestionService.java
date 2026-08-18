@@ -128,7 +128,7 @@ public class EveningQuestionService {
             }
 
             Optional<EveningAnswer> existingOpt = eveningAnswerRepository
-                    .findByEveningQuestionIdAndUserId(question.getId(), userId);
+                    .findFirstByEveningQuestionIdAndUserId(question.getId(), userId);
 
             if (existingOpt.isPresent()) {
                 // 1. 기존 답변이 있으면 Update
@@ -222,9 +222,8 @@ public class EveningQuestionService {
                 List<QuestionTemplate> candidates = questionTemplateRepository.findByMetricTypeAndIsActiveTrue(type);
 
                 if (candidates.isEmpty()) {
-                    continue;
+                    throw new BusinessException(ErrorCode.QUESTION_TEMPLATE_NOT_FOUND);  // 적절한 에러코드 필요
                 }
-
                 QuestionTemplate template = candidates.get(0);
 
                 question = EveningQuestion.builder()
@@ -252,7 +251,7 @@ public class EveningQuestionService {
 
         for (EveningQuestion q : questions) {
 
-            Optional<EveningAnswer> answer = eveningAnswerRepository.findByEveningQuestionIdAndUserId(q.getId(), userId);
+            Optional<EveningAnswer> answer = eveningAnswerRepository.findFirstByEveningQuestionIdAndUserId(q.getId(), userId);
 
             Object myAnswer = null;
             if (answer.isPresent()) {
@@ -320,7 +319,7 @@ public class EveningQuestionService {
                 .findByMetricTypeAndTargetDiseaseIsNullAndIsActiveTrue(type);
 
         if (fallback.isEmpty()) {
-            throw new BusinessException(ErrorCode.TEMPLATE_NOT_FOUND);
+            throw new BusinessException(ErrorCode.QUESTION_TEMPLATE_NOT_FOUND);
         }
 
         return fallback.get(0);
@@ -389,7 +388,7 @@ public class EveningQuestionService {
             String previousContext = "";
             if (lastQuestionOpt.isPresent()) {
                 Optional<EveningAnswer> lastAnswerOpt = eveningAnswerRepository
-                        .findByEveningQuestionIdAndUserId(lastQuestionOpt.get().getId(), userId);
+                        .findFirstByEveningQuestionIdAndUserId(lastQuestionOpt.get().getId(), userId);
 
                 // 이전 답변 중 텍스트(STT 등) 기록이 존재한다면 프롬프트에 추가
                 if (lastAnswerOpt.isPresent() && lastAnswerOpt.get().getTextValue() != null) {

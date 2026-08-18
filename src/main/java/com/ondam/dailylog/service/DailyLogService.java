@@ -67,7 +67,7 @@ public class DailyLogService {
 
         for (EveningQuestion eq : eveningQuestions) {
             Optional<EveningAnswer> answerOpt = eveningAnswerRepository
-                    .findByEveningQuestionIdAndUserId(eq.getId(), userId);
+                    .findFirstByEveningQuestionIdAndUserId(eq.getId(), userId);
             if (answerOpt.isPresent()) {
                 eveningAnswers.add(answerOpt.get());
             }

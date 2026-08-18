@@ -5,6 +5,7 @@ import com.ondam.global.util.GptClient;
 import com.ondam.report.entity.WeeklyReport;
 import com.ondam.report.repository.WeeklyReportRepository;
 import com.ondam.report.dto.response.WeeklyReportResponse;
+import com.ondam.report.dto.response.WeeklyReportHistoryItem;
 import com.ondam.question.entity.MetricType;
 import com.ondam.record.repository.HealthRecordRepository;
 import com.ondam.record.entity.HealthRecord;
@@ -128,7 +129,7 @@ public class WeeklyReportService {
 
         for (EveningQuestion cq : customQuestions) {
             Optional<EveningAnswer> answerOpt = eveningAnswerRepository
-                    .findByEveningQuestionIdAndUserId(cq.getId(), userId);
+                    .findFirstByEveningQuestionIdAndUserId(cq.getId(), userId);
             if (answerOpt.isPresent() && answerOpt.get().getTextValue() != null) {
                 customTexts.add(answerOpt.get().getTextValue());
             }
@@ -333,5 +334,24 @@ public class WeeklyReportService {
         } catch (Exception e) {
             return "이번 주도 꾸준히 기록해주고 계세요.";
         }
+    }
+
+    public List<WeeklyReportHistoryItem> getWeeklyReportHistory(Long userId) {
+
+        List<WeeklyReport> reports = weeklyReportRepository.findByUserIdOrderByWeekStartDateDesc(userId);
+
+        List<WeeklyReportHistoryItem> result = new ArrayList<>();
+
+        for (WeeklyReport report : reports) {
+            WeeklyReportHistoryItem item = WeeklyReportHistoryItem.builder()
+                    .weekStartDate(report.getWeekStartDate().toString())
+                    .weekEndDate(report.getWeekEndDate().toString())
+                    .weeklyComment(report.getAiSummary())
+                    .build();
+
+            result.add(item);
+        }
+
+        return result;
     }
 }
