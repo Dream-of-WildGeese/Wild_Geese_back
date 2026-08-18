@@ -7,15 +7,18 @@ import com.ondam.user.entity.NotificationSetting;
 import com.ondam.user.repository.NotificationSettingRepository;
 import com.ondam.global.common.DateUtils;
 import com.ondam.global.util.GptClient;
+import com.ondam.global.util.S3Uploader;
 import com.ondam.question.entity.MorningQuestion;
 import com.ondam.question.entity.MorningAnswer;
 import com.ondam.question.entity.MorningReaction;
+import com.ondam.question.entity.InputType;
 import com.ondam.question.repository.MorningReactionRepository;
 import com.ondam.question.repository.MorningQuestionRepository;
 import com.ondam.question.repository.MorningAnswerRepository;
 import com.ondam.question.dto.request.MorningAnswerRequest;
 import com.ondam.question.dto.response.MorningQuestionHistoryItem;
 import com.ondam.question.dto.response.MorningQuestionResponse;
+import com.ondam.question.dto.response.MorningAnswerResponse;
 import com.ondam.user.entity.User;
 import com.ondam.user.repository.UserRepository;
 import com.ondam.family.entity.Family;
@@ -24,6 +27,11 @@ import com.ondam.dailylog.service.DailyLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +56,8 @@ public class MorningQuestionService {
     private final MorningReactionRepository morningReactionRepository;
 
     private final GptClient gptClient;
+    private final S3Uploader s3Uploader;
+    private final WebClient openAiWebClient;
 
     public MorningQuestionResponse getTodayQuestion(Long userId) {
         // 1. userId로 User 조회 → Family 얻기
@@ -251,6 +262,49 @@ public class MorningQuestionService {
                     .emoji(emoji)
                     .build();
             morningReactionRepository.save(reaction);
+        }
+    }
+
+    @Transactional
+    public MorningAnswerResponse createAnswerWithStt(MultipartFile audioFile, Long questionId, Long userId) {
+        String audioUrl = s3Uploader.upload(audioFile, "morning-answers");
+        String transcribedText = callWhisperApi(audioFile);
+
+        MorningAnswer answer = MorningAnswer.builder()
+                .morningQuestionId(questionId)
+                .userId(userId)
+                .textValue(transcribedText)
+                .inputType(InputType.VOICE)
+                .answeredAt(LocalDateTime.now())
+                .audioUrl(audioUrl)
+                .build();
+
+        MorningAnswer savedAnswer = morningAnswerRepository.save(answer);
+
+        return new MorningAnswerResponse(
+                savedAnswer.getId(),
+                savedAnswer.getAudioUrl(),
+                savedAnswer.getTextValue()
+        );
+    }
+
+    private String callWhisperApi(MultipartFile audioFile) {
+        try {
+            MultipartBodyBuilder builder = new MultipartBodyBuilder();
+            builder.part("file", audioFile.getResource());
+            builder.part("model", "whisper-1");
+
+            Map<String, Object> response = openAiWebClient.post()
+                    .uri("/audio/transcriptions")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(builder.build()))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            return (String) response.get("text");
+        } catch (Exception e) {
+            return null;
         }
     }
 }

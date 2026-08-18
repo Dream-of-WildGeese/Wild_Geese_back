@@ -29,17 +29,21 @@ public class MorningAnswer extends BaseTimeEntity {
     @Column(nullable = false, length = 30)
     private InputType inputType;
 
+    @Column(length = 500)
+    private String audioUrl;
+
     @Column(nullable = false)
     private LocalDateTime answeredAt;
 
     @Builder
     public MorningAnswer(Long morningQuestionId, Long userId, String textValue,
-                         InputType inputType, LocalDateTime answeredAt) {
+                         InputType inputType, LocalDateTime answeredAt, String audioUrl) {
         this.morningQuestionId = morningQuestionId;
         this.userId = userId;
         this.textValue = textValue;
         this.inputType = inputType;
         this.answeredAt = answeredAt;
+        this.audioUrl = audioUrl;
     }
 
     public void update(String textValue, InputType inputType) {
