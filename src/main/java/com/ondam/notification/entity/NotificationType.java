@@ -6,5 +6,6 @@ public enum NotificationType {
     EVENING_CHECK,
     MEDICATION,
     WEEKLY_REPORT,
-    LETTER
+    LETTER,
+    FAMILY_REACTION
 }
