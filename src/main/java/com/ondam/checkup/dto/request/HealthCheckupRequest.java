@@ -11,5 +11,7 @@ public record HealthCheckupRequest(
         @NotBlank(message = "검진 종류를 입력해주세요.")
         String checkupType,
 
-        String hospitalName
+        String hospitalName,
+
+        Integer reminderDaysBefore
 ) {}

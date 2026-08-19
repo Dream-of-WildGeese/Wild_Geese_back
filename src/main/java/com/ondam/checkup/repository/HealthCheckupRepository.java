@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface HealthCheckupRepository extends JpaRepository<HealthCheckup, Long> {
 
@@ -21,4 +23,16 @@ public interface HealthCheckupRepository extends JpaRepository<HealthCheckup, Lo
     List<HealthCheckup> findAllByUserIdOrderByCheckupDateDesc(Long userId);
 
     Optional<HealthCheckup> findByIdAndUserId(Long id, Long userId);
+
+    @Query("""
+    SELECT h
+    FROM HealthCheckup h
+    WHERE h.checkupDate = :checkupDate
+      AND h.reminderDaysBefore = :reminderDaysBefore
+      AND h.isCompleted = false
+""")
+    List<HealthCheckup> findCheckupsForReminder(
+            @Param("checkupDate") LocalDate checkupDate,
+            @Param("reminderDaysBefore") Integer reminderDaysBefore
+    );
 }

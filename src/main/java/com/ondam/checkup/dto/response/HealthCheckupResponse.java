@@ -16,7 +16,8 @@ public record HealthCheckupResponse(
             LocalDate checkupDate,
             String checkupType,
             String hospitalName,
-            long dDay
+            long dDay,
+            Integer reminderDaysBefore
     ) {}
 
     @Builder

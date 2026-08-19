@@ -44,6 +44,7 @@ public class HealthCheckupService {
                 .checkupDate(request.checkupDate())
                 .checkupType(request.checkupType())
                 .hospitalName(request.hospitalName())
+                .reminderDaysBefore(request.reminderDaysBefore())
                 .isCompleted(false)
                 .build();
 
@@ -66,6 +67,7 @@ public class HealthCheckupService {
                     .checkupType(c.getCheckupType())
                     .hospitalName(c.getHospitalName())
                     .dDay(dDay)
+                    .reminderDaysBefore(c.getReminderDaysBefore())
                     .build();
         }).orElse(null);
 
@@ -99,7 +101,7 @@ public class HealthCheckupService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHECKUP_NOT_FOUND));
 
         // isCompleted는 null로 넘겨서 기존 상태를 유지하게 함
-        checkup.update(request.checkupDate(), request.checkupType(), request.hospitalName(), null);
+        checkup.update(request.checkupDate(), request.checkupType(), request.hospitalName(), null,request.reminderDaysBefore());
     }
 
     @Transactional
