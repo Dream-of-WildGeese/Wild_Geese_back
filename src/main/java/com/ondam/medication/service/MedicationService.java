@@ -121,23 +121,32 @@ public class MedicationService {
             MedicationUpdateRequest request
     ) {
 
+        // 1. 수정할 약 조회
         Medication medication = medicationRepository
                 .findByIdAndUserId(medicationId, userId)
                 .orElseThrow(() ->
-                        new BusinessException(ErrorCode.MEDICATION_NOT_FOUND)
+                        new BusinessException(
+                                ErrorCode.MEDICATION_NOT_FOUND
+                        )
                 );
 
-        // 약 이름 수정
+        // 2. 약 이름 수정
         medication.update(
                 request.name(),
                 medication.isActive()
         );
 
-        // 기존 일정 제거
-        medicationScheduleRepository
-                .deleteAllByMedicationId(medicationId);
+        // 3. 기존 복약 일정 조회
+        List<MedicationSchedule> existingSchedules =
+                medicationScheduleRepository
+                        .findAllByMedicationId(medicationId);
 
-        // 새로운 일정 생성
+        // 4. 기존 일정은 삭제하지 않고 비활성화
+        for (MedicationSchedule schedule : existingSchedules) {
+            schedule.disable();
+        }
+
+        // 5. 수정된 시간으로 새로운 일정 생성
         for (LocalTime scheduledTime : request.scheduledTimes()) {
 
             MedicationSchedule schedule =

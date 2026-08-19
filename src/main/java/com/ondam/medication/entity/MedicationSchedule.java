@@ -49,4 +49,8 @@ public class MedicationSchedule extends BaseTimeEntity {
         this.daysOfWeek = daysOfWeek;
         this.isEnabled = true;
     }
+
+    public void disable() {
+        this.isEnabled = false;
+    }
 }
