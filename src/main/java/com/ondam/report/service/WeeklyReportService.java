@@ -52,7 +52,7 @@ public class WeeklyReportService {
         // 1. 이번 주 월요일~일요일 날짜 계산
         LocalDate thisWeekStart;
         if (weekStartDate != null) {
-            thisWeekStart = weekStartDate;
+            thisWeekStart = weekStartDate.with(DayOfWeek.MONDAY);   // 55번째 줄 수정
         } else {
             LocalDate today = DateUtils.today();
             thisWeekStart = today.with(DayOfWeek.MONDAY);

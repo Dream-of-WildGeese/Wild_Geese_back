@@ -106,6 +106,7 @@ public class MorningQuestionService {
             }
 
             MorningQuestionResponse.FamilyAnswerItem item = MorningQuestionResponse.FamilyAnswerItem.builder()
+                    .answerId(a.getId())
                     .userId(a.getUserId())
                     .name(name)
                     .role(role)
