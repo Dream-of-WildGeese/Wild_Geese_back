@@ -139,7 +139,7 @@ public class WeeklyReportService {
         Map<String, WeeklyReportResponse.MetricDetail> finalMetrics = new HashMap<>();
         for (Map.Entry<String, WeeklyReportResponse.MetricDetail> entry : metrics.entrySet()) {
             WeeklyReportResponse.MetricDetail old = entry.getValue();
-            String commentKey = entry.getKey().toLowerCase() + "Comment";  // 예: "conditionComment"
+            String commentKey = entry.getKey().toLowerCase() + "Comment";
 
             WeeklyReportResponse.MetricDetail updated = WeeklyReportResponse.MetricDetail.builder()
                     .current(old.current())
@@ -212,13 +212,23 @@ public class WeeklyReportService {
 
     private String buildMetricsDescription(Map<String, WeeklyReportResponse.MetricDetail> metrics) {
         StringBuilder sb = new StringBuilder();
+        String[] dayLabels = {"월", "화", "수", "목", "금", "토", "일"};
+
         for (Map.Entry<String, WeeklyReportResponse.MetricDetail> entry : metrics.entrySet()) {
             WeeklyReportResponse.MetricDetail detail = entry.getValue();
-            sb.append(entry.getKey())
-                    .append(": 이번주 ").append(detail.current())
-                    .append(", 지난주 ").append(detail.previous())
-                    .append(", 추세 ").append(detail.trend())
-                    .append("\n");
+            sb.append(entry.getKey()).append(": ");
+            sb.append("이번주 평균 ").append(detail.current());
+            sb.append(", 지난주 평균 ").append(detail.previous());
+            sb.append(", 추세 ").append(detail.trend());
+
+            List<Double> daily = detail.daily();
+            if (daily != null && !daily.isEmpty()) {
+                sb.append(", 요일별(월~일 순): ");
+                for (int i = 0; i < daily.size() && i < 7; i++) {
+                    sb.append(dayLabels[i]).append("=").append(daily.get(i)).append(" ");
+                }
+            }
+            sb.append("\n");
         }
         return sb.toString();
     }
@@ -235,19 +245,19 @@ public class WeeklyReportService {
             당신은 어르신 건강 관리 앱의 리포트 작성자입니다.
             이 리포트는 어르신 본인과 그 자녀가 함께 봅니다.
     
-            이번 주 건강 데이터:
+            이번 주 건강 데이터 (점수는 1~3점, 높을수록 좋은 상태):
             %s
     
             지병 관련 답변: %s
     
             아래 JSON 형식으로만 답변하세요. 다른 설명 없이 JSON만 출력하세요.
             {
-              "weeklyComment": "이번 주 전체 흐름을 요약하는 짧은 제목 (예: '이번 주는 활동량이 줄었어요', '컨디션이 안 좋은 날들이 반복됐어요')",
-              "weeklyDetail": "weeklyComment를 뒷받침하는 두 문장. 여러 지표를 연결해서 설명하고(예: '수요일부터 걸음 수와 컨디션이 함께 처지는 모습이 보였어요'), 잘 지킨 부분이 있으면 짧게 격려하세요(예: '복약은 꾸준히 잘 챙기셨으니'). 마지막 문장은 다음 주 제안이나 안부를 건네는 부드러운 문장으로 마무리하세요.",
-              "conditionComment": "컨디션 지표 한 줄 코멘트. 구체적인 요일을 언급하세요",
-              "sleepComment": "수면 지표 한 줄 코멘트",
-              "mealComment": "식사 지표 한 줄 코멘트",
-              "activityComment": "활동 지표 한 줄 코멘트. 걸음수 변화가 있으면 '평소보다 하루 평균 ~만큼' 형태로 구체적 수치를 언급하세요",
+              "weeklyComment": "이번 주 전체 흐름을 요약하는 짧은 제목 (예: '이번 주는 활동량이 줄었어요')",
+              "weeklyDetail": "weeklyComment를 뒷받침하는 두 문장. 여러 지표를 연결해서 설명하고, 잘 지킨 부분이 있으면 짧게 격려하세요. 마지막 문장은 다음 주 제안이나 안부를 건네는 부드러운 문장으로 마무리하세요.",
+              "conditionComment": "컨디션 요일별 데이터를 보고, 낮았던 날이 있으면 정확한 요일(또는 요일 범위)을 짚어 설명하세요. 다른 지표와 겹치는 시기가 있으면 함께 언급하세요. 낮은 날이 없으면 '~요일 모두 좋은 컨디션을 유지하셨어요' 형태로 칭찬하세요.",
+              "sleepComment": "수면 요일별 데이터를 보고, 부족했던 날이 있으면 정확한 요일을 짚어 설명하세요. 지난주와 비교해 비슷한지 달라졌는지도 언급하세요.",
+              "mealComment": "식사 요일별 데이터를 보고, 부족했던 날이 있으면 정확한 요일을 짚어 설명하세요. 잘 챙긴 날이 많으면 칭찬하는 문장을 포함하세요.",
+              "activityComment": "활동 요일별 데이터를 보고, 적었던 날이 있으면 정확한 요일을 짚어 설명하세요. 걸음수 변화가 있으면 '평소보다 하루 평균 ~만큼' 형태로 구체적 수치를 언급하세요.",
               "customComment": "지병 관련 답변을 요약한 한 줄 코멘트",
               "nextWeekSuggestion": "다음 주를 위한 부드러운 제안 한 문장. 명령이 아니라 제안하는 어투로"
             }
@@ -255,7 +265,7 @@ public class WeeklyReportService {
             문체 규칙:
             - 모든 문장은 존댓말로, 부드럽고 다정한 어투로 작성하세요.
             - weeklyComment는 15자 내외의 짧은 제목, weeklyDetail은 두 문장 이내로 작성하세요.
-            - 나머지 코멘트는 각각 40자를 넘기지 마세요.
+            - 지표별 코멘트(conditionComment~activityComment)는 각각 두 문장 이내, 요일별 데이터에 실제로 나타나는 요일만 언급하세요. 데이터에 없는 요일을 지어내지 마세요.
             - "~것 같아요", "~해 보이네요" 같은 추측 표현 대신, 데이터에 기반한 사실만 말하세요.
             - 절대로 의학적 진단을 내리거나, "때문에" 같은 인과관계를 단정짓지 마세요.
             - 나쁜 수치가 있어도 걱정을 유발하지 말고, 담담하고 따뜻하게 전달하세요.
@@ -263,7 +273,6 @@ public class WeeklyReportService {
 
             String response = gptClient.ask(prompt);
 
-            // GPT가 가끔 ```json ... ``` 코드블럭으로 감싸서 응답하는 경우 제거
             String cleaned = response.replaceAll("```json", "").replaceAll("```", "").trim();
 
             return objectMapper.readValue(cleaned, new TypeReference<Map<String, String>>() {});
