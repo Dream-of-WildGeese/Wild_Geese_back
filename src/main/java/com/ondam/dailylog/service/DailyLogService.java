@@ -27,6 +27,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -62,13 +64,19 @@ public class DailyLogService {
         List<EveningQuestion> eveningQuestions = eveningQuestionRepository
                 .findByUserIdAndQuestionDate(userId, date);
 
-        List<EveningAnswer> eveningAnswers = new ArrayList<>();
+        List<Map<String, Object>> eveningAnswers = new ArrayList<>();
 
         for (EveningQuestion eq : eveningQuestions) {
             Optional<EveningAnswer> answerOpt = eveningAnswerRepository
                     .findFirstByEveningQuestionIdAndUserId(eq.getId(), userId);
             if (answerOpt.isPresent()) {
-                eveningAnswers.add(answerOpt.get());
+                EveningAnswer ea = answerOpt.get();
+                Map<String, Object> item = new HashMap<>();
+                item.put("metricType", eq.getMetricType().toString());
+                item.put("textValue", ea.getTextValue());
+                item.put("choiceValue", ea.getChoiceValue());
+                item.put("answeredAt", ea.getAnsweredAt());
+                eveningAnswers.add(item);
             }
         }
 

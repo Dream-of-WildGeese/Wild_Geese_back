@@ -15,6 +15,7 @@ public record MorningQuestionResponse (
 ) {
     @Builder
     public record FamilyAnswerItem(
+            Long answerId,
             Long userId,
             String name,
             String role,
