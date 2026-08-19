@@ -20,6 +20,11 @@ public class SttClient {
     public String transcribe(MultipartFile audioFile) {
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
+
+            String filename = (audioFile.getOriginalFilename() != null && !audioFile.getOriginalFilename().isBlank())
+                    ? audioFile.getOriginalFilename()
+                    : "record.webm";
+
             builder.part("file", audioFile.getResource());
             builder.part("model", "whisper-1");
 
@@ -31,7 +36,17 @@ public class SttClient {
                     .bodyToMono(Map.class)
                     .block(Duration.ofSeconds(15));
 
-            return (String) response.get("text");
+            String text = (String) response.get("text");
+
+            if (text != null) {
+                String trimmed = text.trim().toLowerCase();
+                if (trimmed.equals("you") || trimmed.equals("you.") || trimmed.equals("thank you.") || trimmed.equals("thank you")) {
+                    return "";
+                }
+                return text.trim();
+            }
+
+            return null;
 
         } catch (Exception e) {
             return null;

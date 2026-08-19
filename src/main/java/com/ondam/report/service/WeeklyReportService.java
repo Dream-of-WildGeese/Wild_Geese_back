@@ -120,13 +120,10 @@ public class WeeklyReportService {
             metrics.put(type.toString(), detail);
         }
 
-        // CUSTOM 답변들을 모아서 코멘트 생성 (나중에 GPT 연동)
         List<EveningQuestion> customQuestions = eveningQuestionRepository
                 .findByUserIdAndMetricTypeAndQuestionDateBetween(
                         userId, MetricType.CUSTOM, thisWeekStart, thisWeekEnd);
         List<String> customTexts = new ArrayList<>();
-
-        Map<String, String> aiComments = generateAllComments(metrics, customTexts);
 
         for (EveningQuestion cq : customQuestions) {
             Optional<EveningAnswer> answerOpt = eveningAnswerRepository
@@ -135,6 +132,7 @@ public class WeeklyReportService {
                 customTexts.add(answerOpt.get().getTextValue());
             }
         }
+        Map<String, String> aiComments = generateAllComments(metrics, customTexts);
 
         Map<String, WeeklyReportResponse.MetricDetail> finalMetrics = new HashMap<>();
         for (Map.Entry<String, WeeklyReportResponse.MetricDetail> entry : metrics.entrySet()) {
