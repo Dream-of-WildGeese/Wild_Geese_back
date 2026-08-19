@@ -66,6 +66,7 @@ public class WeeklyReportService {
 
         // 3. 5개 MetricType(CONDITION, SLEEP, MEAL, ACTIVITY, CUSTOM)마다 반복:
         Map<String, WeeklyReportResponse.MetricDetail> metrics = new HashMap<>();
+        Map<String, List<Double>> lastWeekDailyMap = new HashMap<>();
         boolean isBaselineSufficient = false;
 
         List<MetricType> types = List.of(MetricType.CONDITION, MetricType.SLEEP,
@@ -82,6 +83,10 @@ public class WeeklyReportService {
             // c. 이번주 일별 리스트
             List<HealthRecord> thisWeekRecords = healthRecordRepository
                     .findByUserIdAndMetricTypeAndRecordDateBetween(userId, type, thisWeekStart, thisWeekEnd);
+
+            // 프롬프트용 - 지난주 요일별 값 조회 (API 응답 DTO에는 포함 안 함)
+            List<HealthRecord> lastWeekRecords = healthRecordRepository
+                    .findByUserIdAndMetricTypeAndRecordDateBetween(userId, type, lastWeekStart, lastWeekEnd);
 
             // d. diff, trend 계산 (다음 단계에서)
             Double diff = null;
@@ -108,6 +113,15 @@ public class WeeklyReportService {
                 }
             }
 
+            // 지난주 요일별 값도 저장 (프롬프트용)
+            List<Double> lastWeekDailyValues = new ArrayList<>();
+            for (HealthRecord r : lastWeekRecords) {
+                if (r.getNumericValue() != null) {
+                    lastWeekDailyValues.add(r.getNumericValue().doubleValue());
+                }
+            }
+            lastWeekDailyMap.put(type.toString(), lastWeekDailyValues);
+
             WeeklyReportResponse.MetricDetail detail = WeeklyReportResponse.MetricDetail.builder()
                     .current(thisWeekAvg != null ? thisWeekAvg.doubleValue() : null)
                     .previous(lastWeekAvg != null ? lastWeekAvg.doubleValue() : null)
@@ -132,9 +146,10 @@ public class WeeklyReportService {
                 customTexts.add(answerOpt.get().getTextValue());
             }
         }
-        Map<String, String> aiComments = generateAllComments(metrics, customTexts);
+        Map<String, String> aiComments = generateAllComments(metrics, customTexts, lastWeekDailyMap);
 
         Map<String, WeeklyReportResponse.MetricDetail> finalMetrics = new HashMap<>();
+
         for (Map.Entry<String, WeeklyReportResponse.MetricDetail> entry : metrics.entrySet()) {
             WeeklyReportResponse.MetricDetail old = entry.getValue();
             String commentKey = entry.getKey().toLowerCase() + "Comment";
@@ -154,7 +169,6 @@ public class WeeklyReportService {
         String weeklyComment = aiComments.getOrDefault("weeklyComment", "이번 주 건강 기록을 확인해보세요.");
         String nextWeekSuggestion = aiComments.getOrDefault("nextWeekSuggestion", "다음 주에도 꾸준히 기록해보시는 건 어때요?");
         String customComment = aiComments.getOrDefault("customComment", "이번 주 질환 관련 답변을 확인했어요.");
-        String aiCoachInsight = generateAiCoachInsight(userId, thisWeekStart);
 
         // metrics를 JSON 문자열로 변환
         String metricsJson;
@@ -204,26 +218,38 @@ public class WeeklyReportService {
                 .medication(medicationSummary)
                 .customComment(customComment)
                 .nextWeekSuggestion(nextWeekSuggestion)
-                .aiCoachInsight(aiCoachInsight)
                 .build();
     }
 
-    private String buildMetricsDescription(Map<String, WeeklyReportResponse.MetricDetail> metrics) {
+    private String buildMetricsDescription(
+            Map<String, WeeklyReportResponse.MetricDetail> metrics,
+            Map<String, List<Double>> lastWeekDailyMap) {
+
         StringBuilder sb = new StringBuilder();
         String[] dayLabels = {"월", "화", "수", "목", "금", "토", "일"};
 
         for (Map.Entry<String, WeeklyReportResponse.MetricDetail> entry : metrics.entrySet()) {
             WeeklyReportResponse.MetricDetail detail = entry.getValue();
-            sb.append(entry.getKey()).append(": ");
+            String key = entry.getKey();
+
+            sb.append(key).append(": ");
             sb.append("이번주 평균 ").append(detail.current());
             sb.append(", 지난주 평균 ").append(detail.previous());
             sb.append(", 추세 ").append(detail.trend());
 
-            List<Double> daily = detail.daily();
-            if (daily != null && !daily.isEmpty()) {
-                sb.append(", 요일별(월~일 순): ");
-                for (int i = 0; i < daily.size() && i < 7; i++) {
-                    sb.append(dayLabels[i]).append("=").append(daily.get(i)).append(" ");
+            List<Double> thisWeekDaily = detail.daily();
+            if (thisWeekDaily != null && !thisWeekDaily.isEmpty()) {
+                sb.append(", 이번주 요일별(월~일 순): ");
+                for (int i = 0; i < thisWeekDaily.size() && i < 7; i++) {
+                    sb.append(dayLabels[i]).append("=").append(thisWeekDaily.get(i)).append(" ");
+                }
+            }
+
+            List<Double> lastWeekDaily = lastWeekDailyMap.get(key);
+            if (lastWeekDaily != null && !lastWeekDaily.isEmpty()) {
+                sb.append(", 지난주 요일별(월~일 순): ");
+                for (int i = 0; i < lastWeekDaily.size() && i < 7; i++) {
+                    sb.append(dayLabels[i]).append("=").append(lastWeekDaily.get(i)).append(" ");
                 }
             }
             sb.append("\n");
@@ -233,10 +259,11 @@ public class WeeklyReportService {
 
     private Map<String, String> generateAllComments(
             Map<String, WeeklyReportResponse.MetricDetail> metrics,
-            List<String> customTexts) {
+            List<String> customTexts,
+            Map<String, List<Double>> lastWeekDailyMap) {
 
         try {
-            String metricsDesc = buildMetricsDescription(metrics);
+            String metricsDesc = buildMetricsDescription(metrics, lastWeekDailyMap);
             String customDesc = customTexts.isEmpty() ? "없음" : String.join(" / ", customTexts);
 
             String prompt = String.format("""
@@ -252,19 +279,22 @@ public class WeeklyReportService {
             {
               "weeklyComment": "이번 주 전체 흐름을 요약하는 짧은 제목 (예: '이번 주는 활동량이 줄었어요')",
               "weeklyDetail": "weeklyComment를 뒷받침하는 두 문장. 여러 지표를 연결해서 설명하고, 잘 지킨 부분이 있으면 짧게 격려하세요. 마지막 문장은 다음 주 제안이나 안부를 건네는 부드러운 문장으로 마무리하세요.",
-              "conditionComment": "컨디션 요일별 데이터를 보고, 낮았던 날이 있으면 정확한 요일(또는 요일 범위)을 짚어 설명하세요. 다른 지표와 겹치는 시기가 있으면 함께 언급하세요. 낮은 날이 없으면 '~요일 모두 좋은 컨디션을 유지하셨어요' 형태로 칭찬하세요.",
-              "sleepComment": "수면 요일별 데이터를 보고, 부족했던 날이 있으면 정확한 요일을 짚어 설명하세요. 지난주와 비교해 비슷한지 달라졌는지도 언급하세요.",
-              "mealComment": "식사 요일별 데이터를 보고, 부족했던 날이 있으면 정확한 요일을 짚어 설명하세요. 잘 챙긴 날이 많으면 칭찬하는 문장을 포함하세요.",
-              "activityComment": "활동 요일별 데이터를 보고, 적었던 날이 있으면 정확한 요일을 짚어 설명하세요. 걸음수 변화가 있으면 '평소보다 하루 평균 ~만큼' 형태로 구체적 수치를 언급하세요.",
+              "conditionComment": "다음 두 가지를 각각 한 문장씩, 총 두 문장으로 작성하세요. 1) 이번 주 요일별 데이터를 보고, 낮았던 날이 있으면 정확한 요일(또는 요일 범위)을 짚어 설명하세요. 낮은 날이 없으면 '~요일 모두 좋은 컨디션을 유지하셨어요'처럼 칭찬하세요. 2) 지난주 데이터와 비교해서 비슷한 수준인지, 좋아졌는지, 나빠졌는지 짧게 언급하세요.",
+              "sleepComment": "conditionComment와 같은 두 문장 구조(이번 주 요일 지적 + 지난주 대비 비교)로 작성하세요.",
+              "mealComment": "conditionComment와 같은 두 문장 구조(이번 주 요일 지적 + 지난주 대비 비교)로 작성하세요. 잘 챙긴 날이 많으면 칭찬을 포함하세요.",
+              "activityComment": "conditionComment와 같은 두 문장 구조(이번 주 요일 지적 + 지난주 대비 비교)로 작성하세요. 걸음수 변화가 있으면 '평소보다 하루 평균 ~만큼' 형태로 구체적 수치를 언급하세요.",
               "customComment": "지병 관련 답변을 요약한 한 줄 코멘트",
               "nextWeekSuggestion": "다음 주를 위한 부드러운 제안 한 문장. 명령이 아니라 제안하는 어투로"
             }
     
+            conditionComment 예시: "특히 목요일과 금요일에 컨디션이 안 좋으셨어요. 지난주와 비교해 컨디션은 비슷한 수준이에요."
+                    
+    
             문체 규칙:
             - 모든 문장은 존댓말로, 부드럽고 다정한 어투로 작성하세요.
             - weeklyComment는 15자 내외의 짧은 제목, weeklyDetail은 두 문장 이내로 작성하세요.
-            - 지표별 코멘트(conditionComment~activityComment)는 각각 두 문장 이내, 요일별 데이터에 실제로 나타나는 요일만 언급하세요. 데이터에 없는 요일을 지어내지 마세요.
-            - "~것 같아요", "~해 보이네요" 같은 추측 표현 대신, 데이터에 기반한 사실만 말하세요.
+            - 지표별 코멘트(conditionComment~activityComment)는 반드시 두 문장으로, 이번주 요일별 데이터와 지난주 요일별 데이터에 실제로 나타나는 값만 근거로 사용하세요. 데이터에 없는 요일이나 수치를 지어내지 마세요.
+            - "~것 같아요"는 이번 주 요일을 짚을 때 자연스럽게 쓸 수 있지만, 지난주 비교 문장에서는 "~예요", "~해요"처럼 단정적으로 쓰세요.
             - 절대로 의학적 진단을 내리거나, "때문에" 같은 인과관계를 단정짓지 마세요.
             - 나쁜 수치가 있어도 걱정을 유발하지 말고, 담담하고 따뜻하게 전달하세요.
             """, metricsDesc, customDesc);
@@ -283,74 +313,6 @@ public class WeeklyReportService {
             fallback.put("nextWeekSuggestion", "다음 주에도 꾸준히 기록해보시는 건 어때요?");
             fallback.put("customComment", "이번 주 질환 관련 답변을 확인했어요.");
             return fallback;
-        }
-    }
-
-    private String generateAiCoachInsight(Long userId, LocalDate thisWeekStart) {
-
-        LocalDate twoWeeksStart = thisWeekStart.minusDays(7);
-        LocalDate twoWeeksEnd = thisWeekStart.plusDays(6);
-
-        List<MetricType> types = List.of(MetricType.CONDITION, MetricType.SLEEP, MetricType.MEAL, MetricType.ACTIVITY);
-
-        Map<LocalDate, Map<MetricType, BigDecimal>> byDate = new TreeMap<>();
-        int totalRecordCount = 0;
-
-        for (MetricType type : types) {
-            List<HealthRecord> records = healthRecordRepository
-                    .findByUserIdAndMetricTypeAndRecordDateBetween(userId, type, twoWeeksStart, twoWeeksEnd);
-
-            totalRecordCount += records.size();
-
-            for (HealthRecord r : records) {
-                byDate.computeIfAbsent(r.getRecordDate(), d -> new HashMap<>())
-                        .put(type, r.getNumericValue());
-            }
-        }
-
-        // 데이터가 너무 적으면 인사이트 생략
-        if (totalRecordCount < 20) {
-            return "아직 패턴을 분석할 만큼 기록이 쌓이지 않았어요. 조금 더 기록을 쌓아보세요.";
-        }
-
-        StringBuilder dataText = new StringBuilder();
-        for (Map.Entry<LocalDate, Map<MetricType, BigDecimal>> entry : byDate.entrySet()) {
-            dataText.append(entry.getKey()).append(": ");
-            Map<MetricType, BigDecimal> values = entry.getValue();
-            List<String> parts = new ArrayList<>();
-            for (MetricType type : types) {
-                if (values.containsKey(type)) {
-                    parts.add(type + "=" + values.get(type));
-                }
-            }
-            dataText.append(String.join(", ", parts)).append("\n");
-        }
-
-        try {
-            String prompt = String.format("""
-                당신은 어르신 건강 데이터를 분석하는 AI 웰니스 코치입니다.
-                다음은 최근 2주간, 날짜별 건강 점수입니다 (1~3점, 높을수록 좋은 상태).
-                CONDITION=컨디션, SLEEP=수면, MEAL=식사, ACTIVITY=활동량
-
-                %s
-
-                이 데이터에서, 다음 중 가장 뚜렷하게 확인되는 패턴 하나를 찾아 설명해주세요.
-                - 여러 지표가 같은 날 함께 낮았던 경우
-                - 최근으로 갈수록 특정 지표가 계속 낮아지거나 높아지는 추세
-                - 특정 요일에 반복되는 패턴
-
-                규칙:
-                - 반드시 데이터에 실제로 나타나는 날짜와 수치를 근거로 말하세요. 데이터에 없는 내용은 말하지 마세요.
-                - 뚜렷한 패턴이 없으면 "특별한 패턴은 보이지 않지만, 전반적으로 꾸준히 기록해주고 계세요"라고만 답하세요.
-                - 의학적 진단이나 원인 단정은 하지 마세요. "~한 경향이 보여요" 정도로만 표현하세요.
-                - 두 문장 이내, 존댓말로, 따뜻한 어투로 작성하세요.
-                - 패턴 설명 외에 다른 말은 절대 출력하지 마세요.
-                """, dataText.toString());
-
-            return gptClient.ask(prompt).trim();
-
-        } catch (Exception e) {
-            return "이번 주도 꾸준히 기록해주고 계세요.";
         }
     }
 

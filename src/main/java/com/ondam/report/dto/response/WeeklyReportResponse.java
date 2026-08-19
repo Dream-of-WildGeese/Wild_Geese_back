@@ -15,8 +15,7 @@ public record WeeklyReportResponse(
         Map<String, MetricDetail> metrics,
         MedicationSummary medication,
         String customComment,
-        String nextWeekSuggestion,
-        String aiCoachInsight
+        String nextWeekSuggestion
 ) {
     @Builder
     public record MetricDetail(
