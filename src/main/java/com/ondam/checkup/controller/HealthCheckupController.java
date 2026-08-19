@@ -1,6 +1,7 @@
 package com.ondam.checkup.controller;
 
 import com.ondam.checkup.dto.request.HealthCheckupRequest;
+import com.ondam.checkup.dto.response.HealthCheckupListItem;
 import com.ondam.checkup.dto.response.HealthCheckupResponse;
 import com.ondam.checkup.service.HealthCheckupService;
 import com.ondam.global.common.ApiResponse;
@@ -12,6 +13,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "건강검진", description = "건강검진 일정 관리 및 진료 질문 추천 API")
 @RestController
@@ -62,5 +65,24 @@ public class HealthCheckupController {
             @PathVariable Long checkupId) {
         healthCheckupService.deleteCheckup(userId, checkupId);
         return ApiResponse.success(null);
+    }
+
+    @Operation(summary = "특정 사용자의 전체 건강검진 일정 조회")
+    @GetMapping("/all")
+    public ApiResponse<List<HealthCheckupListItem>> getAllCheckups(
+            @RequestHeader(value = "X-User-Id", required = false) Long headerUserId,
+            @RequestParam(required = false) Long userId
+    ) {
+
+        Long targetUserId =
+                (userId != null) ? userId : headerUserId;
+
+        if (targetUserId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return ApiResponse.success(
+                healthCheckupService.getAllCheckups(targetUserId)
+        );
     }
 }

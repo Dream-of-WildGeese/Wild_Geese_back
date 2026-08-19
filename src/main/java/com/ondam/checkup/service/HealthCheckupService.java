@@ -17,7 +17,7 @@ import com.ondam.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.ondam.checkup.dto.response.HealthCheckupListItem;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.temporal.ChronoUnit;
@@ -188,5 +188,23 @@ public class HealthCheckupService {
         if (!userRepository.existsById(userId)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
+    }
+
+    public List<HealthCheckupListItem> getAllCheckups(Long userId) {
+
+        validateUser(userId);
+
+        return healthCheckupRepository
+                .findAllByUserIdOrderByCheckupDateDesc(userId)
+                .stream()
+                .map(c -> HealthCheckupListItem.builder()
+                        .checkupId(c.getId())
+                        .checkupDate(c.getCheckupDate())
+                        .checkupType(c.getCheckupType())
+                        .hospitalName(c.getHospitalName())
+                        .isCompleted(c.isCompleted())
+                        .reminderDaysBefore(c.getReminderDaysBefore())
+                        .build())
+                .toList();
     }
 }
