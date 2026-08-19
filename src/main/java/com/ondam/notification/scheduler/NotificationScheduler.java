@@ -53,7 +53,7 @@ public class NotificationScheduler {
                 .withNano(0);
 
         System.out.println(
-                "🔥 NotificationScheduler 실행 now = " + now
+                " NotificationScheduler 실행 now = " + now
         );
 
         MedicationDay today =
@@ -102,7 +102,7 @@ public class NotificationScheduler {
             )) {
 
                 System.out.println(
-                        "🔥 아침 알림 조건 통과 userId="
+                        " 아침 알림 조건 통과 userId="
                                 + userId
                 );
 
@@ -133,7 +133,7 @@ public class NotificationScheduler {
             )) {
 
                 System.out.println(
-                        "🔥 저녁 알림 조건 통과 userId="
+                        " 저녁 알림 조건 통과 userId="
                                 + userId
                 );
 
@@ -219,7 +219,7 @@ public class NotificationScheduler {
             }
 
             System.out.println(
-                    "🔥 복약 알림 조건 통과 userId="
+                    " 복약 알림 조건 통과 userId="
                             + userId
             );
 

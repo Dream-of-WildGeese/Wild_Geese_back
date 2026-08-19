@@ -31,20 +31,26 @@ public class HealthCheckup extends BaseTimeEntity {
     @Column(nullable = false)
     private boolean isCompleted;
 
+    @Column
+    private Integer reminderDaysBefore;
+
     @Builder
-    public HealthCheckup(Long userId, LocalDate checkupDate, String checkupType, String hospitalName, boolean isCompleted) {
+    public HealthCheckup(Long userId, LocalDate checkupDate, String checkupType, String hospitalName, boolean isCompleted,Integer reminderDaysBefore) {
         this.userId = userId;
         this.checkupDate = checkupDate;
         this.checkupType = checkupType;
         this.hospitalName = hospitalName;
         this.isCompleted = isCompleted;
+        this.reminderDaysBefore = reminderDaysBefore;
     }
 
-    public void update(LocalDate checkupDate, String checkupType, String hospitalName, Boolean isCompleted) {
+    public void update(LocalDate checkupDate, String checkupType, String hospitalName, Boolean isCompleted,Integer reminderDaysBefore) {
         if (checkupDate != null) this.checkupDate = checkupDate;
         if (checkupType != null) this.checkupType = checkupType;
         if (hospitalName != null) this.hospitalName = hospitalName;
         if (isCompleted != null) this.isCompleted = isCompleted;
+
+        this.reminderDaysBefore = reminderDaysBefore;
     }
 
     public void complete() {

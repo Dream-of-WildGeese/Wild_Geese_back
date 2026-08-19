@@ -7,5 +7,6 @@ public enum NotificationType {
     MEDICATION,
     WEEKLY_REPORT,
     LETTER,
-    FAMILY_REACTION
+    FAMILY_REACTION,
+    HEALTH_CHECKUP
 }
