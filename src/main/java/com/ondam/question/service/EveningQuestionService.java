@@ -117,14 +117,10 @@ public class EveningQuestionService {
             // choices에서 numericValue 찾기
             BigDecimal numericValue = null;
             if (item.choiceValue() != null) {
-                List<EveningQuestionResponse.ChoiceItem> choices = parseChoices(question.getChoices());
-                if (choices != null) {
-                    for (EveningQuestionResponse.ChoiceItem choice : choices) {
-                        if (choice.label().equals(item.choiceValue())) {
-                            numericValue = BigDecimal.valueOf(choice.value());
-                            break;
-                        }
-                    }
+                try {
+                    numericValue = new BigDecimal(item.choiceValue());
+                } catch (NumberFormatException e) {
+                    // choiceValue가 숫자가 아니면 무시
                 }
             }
 
@@ -405,6 +401,9 @@ public class EveningQuestionService {
             return gptClient.ask(prompt).trim();
 
         } catch (Exception e) {
+            System.err.println("[CUSTOM_DEBUG] GPT 생성 실패: " + e.getClass().getName() + " - " + e.getMessage());
+            e.printStackTrace();
+
             QuestionTemplate fallback = pickCustomTemplate(userId, MetricType.CUSTOM);
             return fallback.getContent();
         }

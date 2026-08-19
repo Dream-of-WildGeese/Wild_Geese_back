@@ -54,8 +54,7 @@ public class DailyLogService {
 
         if(questionOpt.isPresent()){
             Optional<MorningAnswer> answerOpt = morningAnswerRepository
-                    .findByMorningQuestionIdAndUserId(questionOpt.get().getId(), userId);
-            if(answerOpt.isPresent()){
+                    .findFirstByMorningQuestionIdAndUserId(questionOpt.get().getId(), userId);            if(answerOpt.isPresent()){
                 morningAnswer = answerOpt.get();
             }
         }

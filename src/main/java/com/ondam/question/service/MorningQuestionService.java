@@ -88,7 +88,7 @@ public class MorningQuestionService {
 
         // 4. 내 답변 따로 조회
         Optional<MorningAnswer> myAnswerOpt = morningAnswerRepository
-                .findByMorningQuestionIdAndUserId(question.getId(), userId);
+                .findFirstByMorningQuestionIdAndUserId(question.getId(), userId);
         // 5. 응답 조립
 
         List<MorningQuestionResponse.FamilyAnswerItem> familyAnswerItems = new ArrayList<>();
@@ -190,7 +190,7 @@ public class MorningQuestionService {
                 .orElseThrow(() -> new RuntimeException("질문이 존재하지 않습니다."));
 
         Optional<MorningAnswer> existingOpt = morningAnswerRepository
-                .findByMorningQuestionIdAndUserId(question.getId(), userId);
+                .findFirstByMorningQuestionIdAndUserId(question.getId(), userId);
 
         if (existingOpt.isPresent()) {
             // 이미 답변이 있으면 덮어쓰기 (Update)

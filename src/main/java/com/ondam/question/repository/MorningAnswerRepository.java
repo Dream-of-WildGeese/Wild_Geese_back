@@ -9,5 +9,4 @@ import java.util.List;
 public interface MorningAnswerRepository extends JpaRepository<MorningAnswer, Long>{
 
     List<MorningAnswer> findByMorningQuestionId(Long morningQuestionId);
-    Optional<MorningAnswer> findByMorningQuestionIdAndUserId(Long morningQuestionId, Long userId);
-}
+    Optional<MorningAnswer> findFirstByMorningQuestionIdAndUserId(Long morningQuestionId, Long userId);}
