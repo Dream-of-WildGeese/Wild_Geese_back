@@ -201,6 +201,7 @@ public class WeeklyReportService {
                 .weekEndDate(thisWeekEnd)
                 .metricsSummary(metricsJson)
                 .aiSummary(weeklyComment)
+                .weeklyDetail(aiComments.getOrDefault("weeklyDetail", "이번 주 건강 흐름을 확인해보세요."))
                 .isBaselineSufficient(isBaselineSufficient)
                 .build();
 
@@ -380,7 +381,7 @@ public class WeeklyReportService {
                     .weekEndDate(report.getWeekEndDate().toString())
                     .isBaselineSufficient(report.isBaselineSufficient())
                     .weeklyComment(report.getAiSummary())
-                    .weeklyDetail(report.getAiSummary())   // weeklyDetail 별도 저장 컬럼이 없다면 임시로 동일하게
+                    .weeklyDetail(report.getWeeklyDetail())
                     .metrics(metrics)
                     .medication(medicationSummary)
                     .nextWeekSuggestion("")   // 별도 저장 컬럼 없으면 빈 값
