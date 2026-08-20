@@ -326,7 +326,7 @@ public class MorningQuestionService {
             String content =
                     sender.getName()
                             + "님이 회원님의 아침 답변에 "
-                            + emoji
+                            + translateEmoji(emoji)
                             + " 반응을 남겼어요.";
 
             // 6. 앱 내부 알림 저장
@@ -379,5 +379,17 @@ public class MorningQuestionService {
                 savedAnswer.getAudioUrl(),
                 savedAnswer.getTextValue()
         );
+    }
+
+    private String translateEmoji(String emoji) {
+        if (emoji == null) return "";
+        return switch (emoji.toUpperCase()) {
+            case "CHEER" -> "응원";
+            case "CONGRATS" -> "축하";
+            case "BEST" -> "최고";
+            case "FUNNY" -> "재미있어요";
+            case "LIKE" -> "좋아요";
+            default -> emoji;   // 방어용, 모르는 값이 오면 원문 그대로
+        };
     }
 }
