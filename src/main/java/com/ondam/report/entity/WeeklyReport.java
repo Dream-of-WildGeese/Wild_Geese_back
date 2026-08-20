@@ -31,17 +31,21 @@ public class WeeklyReport extends BaseTimeEntity {
     @Column(columnDefinition = "text")
     private String aiSummary;
 
+    @Column(columnDefinition = "text")
+    private String weeklyDetail;
+
     @Column(nullable = false)
     private boolean isBaselineSufficient;
 
     @Builder
     public WeeklyReport(Long userId, LocalDate weekStartDate, LocalDate weekEndDate,
-                        String metricsSummary, String aiSummary, boolean isBaselineSufficient){
+                        String metricsSummary, String aiSummary, String weeklyDetail, boolean isBaselineSufficient){
         this.userId = userId;
         this.weekStartDate = weekStartDate;
         this.weekEndDate = weekEndDate;
         this.metricsSummary = metricsSummary;
         this.aiSummary = aiSummary;
+        this.weeklyDetail = weeklyDetail;
         this.isBaselineSufficient = isBaselineSufficient;
     }
 }

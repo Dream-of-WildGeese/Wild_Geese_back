@@ -60,6 +60,17 @@ public class WeeklyReportService {
 
         LocalDate thisWeekEnd = thisWeekStart.plusDays(6);
 
+        LocalDate today = DateUtils.today();
+        LocalDate currentWeekStart = today.with(DayOfWeek.MONDAY);
+        boolean isPastWeek = thisWeekStart.isBefore(currentWeekStart);
+
+        if (isPastWeek) {
+            Optional<WeeklyReport> existingOpt = weeklyReportRepository.findByUserIdAndWeekStartDate(userId, thisWeekStart);
+            if (existingOpt.isPresent()) {
+                return convertToResponse(existingOpt.get());
+            }
+        }
+
         // 2. 지난 주 월요일~일요일 날짜 계산
         LocalDate lastWeekStart = thisWeekStart.minusDays(7);
         LocalDate lastWeekEnd = lastWeekStart.plusDays(6);
@@ -166,14 +177,14 @@ public class WeeklyReportService {
             finalMetrics.put(entry.getKey(), updated);
         }
 
-        String weeklyComment = aiComments.getOrDefault("weeklyComment", "이번 주 건강 기록을 확인해보세요.");
+        String weeklyComment = aiComments.getOrDefault("weeklyComment", "평범하게 지낸 주");
         String nextWeekSuggestion = aiComments.getOrDefault("nextWeekSuggestion", "다음 주에도 꾸준히 기록해보시는 건 어때요?");
         String customComment = aiComments.getOrDefault("customComment", "이번 주 질환 관련 답변을 확인했어요.");
 
         // metrics를 JSON 문자열로 변환
         String metricsJson;
         try {
-            metricsJson = objectMapper.writeValueAsString(metrics);
+            metricsJson = objectMapper.writeValueAsString(finalMetrics);
         } catch (JacksonException e) {
             throw new RuntimeException("WeeklyReport JSON 변환 실패", e);
         }
@@ -190,6 +201,7 @@ public class WeeklyReportService {
                 .weekEndDate(thisWeekEnd)
                 .metricsSummary(metricsJson)
                 .aiSummary(weeklyComment)
+                .weeklyDetail(aiComments.getOrDefault("weeklyDetail", "이번 주 건강 흐름을 확인해보세요."))
                 .isBaselineSufficient(isBaselineSufficient)
                 .build();
 
@@ -288,7 +300,7 @@ public class WeeklyReportService {
     
             아래 JSON 형식으로만 답변하세요. 다른 설명 없이 JSON만 출력하세요.
             {
-              "weeklyComment": "이번 주 전체 흐름을 요약하는 짧은 제목 (예: '이번 주는 활동량이 줄었어요')",
+              "weeklyComment": "이번 주 전체 흐름을 요약하는 짧은 제목. 반드시 '~한 주', '~주' 형태의 명사형으로 끝내세요. (예: '잠이 부족한 주', '잘 챙겨 먹은 주', '활동량 최고!', '바쁜 한 주')",
               "weeklyDetail": "weeklyComment를 뒷받침하는 두 문장. 여러 지표를 연결해서 설명하고, 잘 지킨 부분이 있으면 짧게 격려하세요. 마지막 문장은 다음 주 제안이나 안부를 건네는 부드러운 문장으로 마무리하세요.",
               "conditionComment": "다음 두 가지를 각각 한 문장씩, 총 두 문장으로 작성하세요. 1) 이번 주 요일별 데이터를 보고, 낮았던 날이 있으면 정확한 요일(또는 요일 범위)을 짚어 설명하세요. '점수가 낮았어요' 대신 '컨디션이 안 좋으셨어요'처럼 상태를 표현하는 말로 쓰세요. 낮은 날이 없으면 '~요일 모두 좋은 컨디션을 유지하셨어요'처럼 칭찬하세요. 2) 지난주와 비교해서 '좋아졌어요', '비슷해요', '나빠졌어요' 중 하나로 짧게 표현하세요. 절대로 숫자나 소수점 수치를 언급하지 마세요.",
               "sleepComment": "conditionComment와 같은 두 문장 구조로 작성하세요. 숫자나 점수 표현 없이, '푹 주무셨어요', '잠이 부족하셨어요'처럼 상태로 표현하세요.",
@@ -319,7 +331,7 @@ public class WeeklyReportService {
         } catch (Exception e) {
             // 실패 시 기본 문구로 폴백
             Map<String, String> fallback = new HashMap<>();
-            fallback.put("weeklyComment", "이번 주 건강 기록을 확인해보세요.");
+            fallback.put("weeklyComment", "평범하게 지낸 주");
             fallback.put("weeklyDetail", "이번 주 건강 흐름을 확인해보세요.");
             fallback.put("nextWeekSuggestion", "다음 주에도 꾸준히 기록해보시는 건 어때요?");
             fallback.put("customComment", "이번 주 질환 관련 답변을 확인했어요.");
@@ -344,5 +356,39 @@ public class WeeklyReportService {
         }
 
         return result;
+    }
+
+    private WeeklyReportResponse convertToResponse(WeeklyReport report) {
+        try {
+            Map<String, WeeklyReportResponse.MetricDetail> metrics = objectMapper.readValue(
+                    report.getMetricsSummary(),
+                    new TypeReference<Map<String, WeeklyReportResponse.MetricDetail>>() {});
+
+            // 복약 정보는 과거 주차라도 그때 그대로 다시 계산 (복약 로그 자체는 안 바뀌니 문제없음)
+            long takenCount = medicationLogRepository.countByUserIdAndStatusAndRecordDateBetween(
+                    report.getUserId(), MedicationLogStatus.TAKEN, report.getWeekStartDate(), report.getWeekEndDate());
+            long totalCount = medicationLogRepository.countByUserIdAndStatusAndRecordDateBetween(
+                    report.getUserId(), MedicationLogStatus.NOT_RECORDED, report.getWeekStartDate(), report.getWeekEndDate()) + takenCount;
+
+            WeeklyReportResponse.MedicationSummary medicationSummary = WeeklyReportResponse.MedicationSummary.builder()
+                    .takenCount(takenCount)
+                    .totalCount(totalCount)
+                    .comment("이번 주 " + totalCount + "번 중 " + takenCount + "번 챙기셨어요.")
+                    .build();
+
+            return WeeklyReportResponse.builder()
+                    .weekStartDate(report.getWeekStartDate().toString())
+                    .weekEndDate(report.getWeekEndDate().toString())
+                    .isBaselineSufficient(report.isBaselineSufficient())
+                    .weeklyComment(report.getAiSummary())
+                    .weeklyDetail(report.getWeeklyDetail())
+                    .metrics(metrics)
+                    .medication(medicationSummary)
+                    .nextWeekSuggestion("")   // 별도 저장 컬럼 없으면 빈 값
+                    .build();
+
+        } catch (Exception e) {
+            throw new RuntimeException("과거 리포트 변환 실패", e);
+        }
     }
 }

@@ -51,4 +51,19 @@ public class WeeklyReportController {
             @RequestHeader("X-User-Id") Long userId) {
         return ApiResponse.success(weeklyReportService.getWeeklyReportHistory(userId));
     }
+
+    @Operation(summary = "가족 구성원 특정 주 리포트 조회", description = "가족 구성원의 지정한 주 건강 지표 변화를 조회합니다.")
+    @GetMapping("/family/{userId}")
+    public ApiResponse<WeeklyReportResponse> getFamilyWeeklyReport(
+            @PathVariable Long userId,
+            @RequestParam LocalDate weekStartDate) {
+        return ApiResponse.success(weeklyReportService.getWeeklyReport(userId, weekStartDate));
+    }
+
+    @Operation(summary = "가족 구성원 주간 리포트 이력 조회", description = "가족 구성원의 모든 주차별 리포트 한줄평을 최신순으로 조회합니다.")
+    @GetMapping("/family/{userId}/history")
+    public ApiResponse<List<WeeklyReportHistoryItem>> getFamilyWeeklyReportHistory(
+            @PathVariable Long userId) {
+        return ApiResponse.success(weeklyReportService.getWeeklyReportHistory(userId));
+    }
 }
