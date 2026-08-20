@@ -5,10 +5,7 @@ import com.ondam.medication.dto.request.MedicationCreateRequest;
 import com.ondam.medication.dto.request.MedicationLogCreateRequest;
 import com.ondam.medication.dto.request.MedicationLogUpdateRequest;
 import com.ondam.medication.dto.request.MedicationUpdateRequest;
-import com.ondam.medication.dto.response.MedicationCreateResponse;
-import com.ondam.medication.dto.response.MedicationDueResponse;
-import com.ondam.medication.dto.response.MedicationLogResponse;
-import com.ondam.medication.dto.response.MedicationResponse;
+import com.ondam.medication.dto.response.*;
 import com.ondam.medication.service.MedicationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -159,6 +156,26 @@ public class MedicationController {
         );
 
         return ApiResponse.success(null);
+    }
+
+    @Operation(
+            summary = "가족 복약 현황 조회",
+            description = "같은 가족 구성원의 특정 날짜 복약 여부를 조회합니다."
+    )
+    @GetMapping("/family/status")
+    public ApiResponse<List<FamilyMedicationStatusResponse>> getFamilyMedicationStatus(
+            @RequestHeader("X-User-Id") Long requesterUserId,
+            @RequestParam Long targetUserId,
+            @RequestParam LocalDate date
+    ) {
+
+        return ApiResponse.success(
+                medicationService.getFamilyMedicationStatus(
+                        requesterUserId,
+                        targetUserId,
+                        date
+                )
+        );
     }
 
 }

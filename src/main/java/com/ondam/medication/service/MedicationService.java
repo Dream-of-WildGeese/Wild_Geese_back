@@ -6,10 +6,7 @@ import com.ondam.medication.dto.request.MedicationCreateRequest;
 import com.ondam.medication.dto.request.MedicationLogCreateRequest;
 import com.ondam.medication.dto.request.MedicationLogUpdateRequest;
 import com.ondam.medication.dto.request.MedicationUpdateRequest;
-import com.ondam.medication.dto.response.MedicationCreateResponse;
-import com.ondam.medication.dto.response.MedicationDueResponse;
-import com.ondam.medication.dto.response.MedicationLogResponse;
-import com.ondam.medication.dto.response.MedicationResponse;
+import com.ondam.medication.dto.response.*;
 import com.ondam.medication.entity.*;
 import com.ondam.medication.repository.MedicationLogRepository;
 import com.ondam.medication.repository.MedicationRepository;
@@ -431,5 +428,47 @@ public class MedicationService {
             }
         }
     }
+
+    public List<FamilyMedicationStatusResponse> getFamilyMedicationStatus(
+            Long requesterUserId,
+            Long targetUserId,
+            LocalDate date
+    ) {
+
+        User requester = userRepository.findById(requesterUserId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        User target = userRepository.findById(targetUserId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        if (requester.getFamily() == null
+                || target.getFamily() == null
+                || !requester.getFamily().getId()
+                .equals(target.getFamily().getId())) {
+
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
+
+        MedicationLogResponse medicationLogs =
+                getMedicationLogs(targetUserId, date);
+
+        return medicationLogs.medications()
+                .stream()
+                .map(item ->
+                        FamilyMedicationStatusResponse.builder()
+                                .medicationId(item.medicationId())
+                                .medicationName(item.name())
+                                .scheduledTime(item.scheduledTime())
+                                .status(item.status().name())
+                                .build()
+                )
+                .toList();
+    }
+
+
 
 }
