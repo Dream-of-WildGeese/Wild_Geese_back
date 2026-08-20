@@ -1,5 +1,6 @@
 package com.ondam.dailylog.service;
 
+import com.ondam.global.util.GptClient;
 import com.ondam.dailylog.entity.DailyLog;
 import com.ondam.dailylog.repository.DailyLogRepository;
 import com.ondam.dailylog.dto.response.DailyLogResponse;
@@ -18,7 +19,6 @@ import com.ondam.family.entity.Family;
 import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.core.JacksonException;
@@ -40,7 +40,8 @@ public class DailyLogService {
     private final EveningAnswerRepository eveningAnswerRepository;
     private final EveningQuestionRepository eveningQuestionRepository;
     private final ObjectMapper objectMapper;
-    private final UserRepository userRepository;   // ← 이 줄 추가
+    private final UserRepository userRepository;
+    private final GptClient gptClient;
 
     public void refresh(Long userId, LocalDate date) {
         User user = userRepository.findById(userId)
@@ -98,6 +99,7 @@ public class DailyLogService {
         int eveningCompletedCount = eveningAnswers.size();
         int eveningTotalCount = eveningQuestions.size();
 
+        String summaryText = generateDailySummary(morningAnswerJson, eveningAnswers, eveningCompletedCount, eveningTotalCount);
         Optional<DailyLog> existingLogOpt = dailyLogRepository.findByUserIdAndLogDate(userId, date);
 
         if (existingLogOpt.isPresent()) {
@@ -113,6 +115,7 @@ public class DailyLogService {
                 .morningAnswered(morningAnswered)
                 .eveningCompletedCount(eveningCompletedCount)
                 .eveningTotalCount(eveningTotalCount)
+                .summaryText(summaryText)
                 .build();
 
         dailyLogRepository.save(dailyLog);
@@ -130,6 +133,7 @@ public class DailyLogService {
                     .morningAnswered(false)
                     .eveningCompletedCount(0)
                     .eveningTotalCount(0)
+                    .summaryText("아직 오늘 기록이 없어요.")
                     .build();
 
             return response;
@@ -164,6 +168,7 @@ public class DailyLogService {
                     .eveningTotalCount(eveningTotalCount)
                     .morningAnswer(morningAnswerItem)
                     .eveningAnswers(eveningAnswerItems)
+                    .summaryText(dailyLog.getSummaryText())
                     .build();
         }
     }
@@ -187,5 +192,46 @@ public class DailyLogService {
         }
 
         return result;
+    }
+
+    private String generateDailySummary(String morningAnswerJson, List<Map<String, Object>> eveningAnswers,
+                                        int eveningCompletedCount, int eveningTotalCount) {
+
+        if (eveningCompletedCount == 0 && morningAnswerJson == null) {
+            return "아직 오늘 기록이 없어요.";
+        }
+
+        try {
+            StringBuilder dataText = new StringBuilder();
+            dataText.append("저녁 체크 완료: ").append(eveningCompletedCount).append("/").append(eveningTotalCount).append("\n");
+
+            for (Map<String, Object> ans : eveningAnswers) {
+                dataText.append(ans.get("metricType")).append(": ");
+                if (ans.get("textValue") != null) {
+                    dataText.append(ans.get("textValue"));
+                }
+                dataText.append("\n");
+            }
+
+            String prompt = String.format("""
+                당신은 어르신 건강 관리 앱의 일일 요약 작성자입니다.
+                오늘 하루의 건강 기록입니다:
+                %s
+
+                이 기록을 보고, 오늘 하루를 한 문장으로 따뜻하게 요약해주세요.
+
+                규칙:
+                - 반드시 한 문장, 15~25자 내외로 작성하세요.
+                - 숫자나 점수를 언급하지 말고, "잘 챙기셨어요", "조금 힘든 하루였어요"처럼 자연스러운 말로 표현하세요.
+                - 기록이 일부만 있으면 그 사실 자체를 담담하게 표현하세요.
+                - 의학적 진단이나 걱정을 유발하는 표현은 쓰지 마세요.
+                - 문장만 출력하고 다른 설명은 하지 마세요.
+                """, dataText.toString());
+
+            return gptClient.ask(prompt).trim();
+
+        } catch (Exception e) {
+            return "오늘도 기록해주셔서 감사해요.";
+        }
     }
 }

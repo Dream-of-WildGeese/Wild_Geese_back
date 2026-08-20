@@ -14,10 +14,18 @@ import com.ondam.question.entity.MetricType;
 import com.ondam.question.repository.EveningAnswerRepository;
 import com.ondam.question.repository.EveningQuestionRepository;
 import com.ondam.user.repository.UserRepository;
+import com.ondam.checkup.dto.response.HealthCheckupListItem;
+import com.ondam.checkup.entity.DoctorQuestionCache;
+import com.ondam.checkup.repository.DoctorQuestionCacheRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.ondam.checkup.dto.response.HealthCheckupListItem;
+
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+
+import java.util.List;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.temporal.ChronoUnit;
@@ -33,6 +41,8 @@ public class HealthCheckupService {
     private final UserRepository userRepository;
     private final EveningQuestionRepository eveningQuestionRepository;
     private final EveningAnswerRepository eveningAnswerRepository;
+    private final DoctorQuestionCacheRepository doctorQuestionCacheRepository;
+    private final ObjectMapper objectMapper;
     private final GptClient gptClient;
 
     @Transactional
@@ -86,7 +96,7 @@ public class HealthCheckupService {
                 .toList();
 
         // 3. 최근 30일간 저녁 CUSTOM 기록 기반 "진료 질문/증상 변화" 추출
-        List<String> doctorQuestions = generateDoctorQuestions(userId, today);
+        List<String> doctorQuestions = getCachedOrGenerateDoctorQuestions(userId, today);
 
         return HealthCheckupResponse.builder()
                 .upcomingCheckup(upcomingItem)
@@ -206,5 +216,42 @@ public class HealthCheckupService {
                         .reminderDaysBefore(c.getReminderDaysBefore())
                         .build())
                 .toList();
+    }
+
+    private List<String> getCachedOrGenerateDoctorQuestions(Long userId, LocalDate today) {
+
+        Optional<DoctorQuestionCache> cacheOpt = doctorQuestionCacheRepository.findByUserId(userId);
+
+        if (cacheOpt.isPresent() && cacheOpt.get().getUpdatedAt().toLocalDate().equals(today)) {
+            // 오늘 이미 생성된 캐시가 있으면 그대로 사용
+            try {
+                return objectMapper.readValue(cacheOpt.get().getQuestionsJson(),
+                        new TypeReference<List<String>>() {});
+            } catch (Exception e) {
+                // 파싱 실패하면 새로 생성
+            }
+        }
+
+        // 캐시 없거나 오늘 것이 아니면 새로 생성
+        List<String> questions = generateDoctorQuestions(userId, today);
+
+        try {
+            String questionsJson = objectMapper.writeValueAsString(questions);
+
+            if (cacheOpt.isPresent()) {
+                cacheOpt.get().update(questionsJson);
+                doctorQuestionCacheRepository.save(cacheOpt.get());
+            } else {
+                DoctorQuestionCache newCache = DoctorQuestionCache.builder()
+                        .userId(userId)
+                        .questionsJson(questionsJson)
+                        .build();
+                doctorQuestionCacheRepository.save(newCache);
+            }
+        } catch (Exception e) {
+            // 저장 실패해도 이번 응답은 정상적으로 나가야 하니 무시
+        }
+
+        return questions;
     }
 }
