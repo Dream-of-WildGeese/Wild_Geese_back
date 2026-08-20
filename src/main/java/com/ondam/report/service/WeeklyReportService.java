@@ -60,6 +60,17 @@ public class WeeklyReportService {
 
         LocalDate thisWeekEnd = thisWeekStart.plusDays(6);
 
+        LocalDate today = DateUtils.today();
+        LocalDate currentWeekStart = today.with(DayOfWeek.MONDAY);
+        boolean isPastWeek = thisWeekStart.isBefore(currentWeekStart);
+
+        if (isPastWeek) {
+            Optional<WeeklyReport> existingOpt = weeklyReportRepository.findByUserIdAndWeekStartDate(userId, thisWeekStart);
+            if (existingOpt.isPresent()) {
+                return convertToResponse(existingOpt.get());
+            }
+        }
+
         // 2. 지난 주 월요일~일요일 날짜 계산
         LocalDate lastWeekStart = thisWeekStart.minusDays(7);
         LocalDate lastWeekEnd = lastWeekStart.plusDays(6);
@@ -173,7 +184,7 @@ public class WeeklyReportService {
         // metrics를 JSON 문자열로 변환
         String metricsJson;
         try {
-            metricsJson = objectMapper.writeValueAsString(metrics);
+            metricsJson = objectMapper.writeValueAsString(finalMetrics);
         } catch (JacksonException e) {
             throw new RuntimeException("WeeklyReport JSON 변환 실패", e);
         }
@@ -344,5 +355,39 @@ public class WeeklyReportService {
         }
 
         return result;
+    }
+
+    private WeeklyReportResponse convertToResponse(WeeklyReport report) {
+        try {
+            Map<String, WeeklyReportResponse.MetricDetail> metrics = objectMapper.readValue(
+                    report.getMetricsSummary(),
+                    new TypeReference<Map<String, WeeklyReportResponse.MetricDetail>>() {});
+
+            // 복약 정보는 과거 주차라도 그때 그대로 다시 계산 (복약 로그 자체는 안 바뀌니 문제없음)
+            long takenCount = medicationLogRepository.countByUserIdAndStatusAndRecordDateBetween(
+                    report.getUserId(), MedicationLogStatus.TAKEN, report.getWeekStartDate(), report.getWeekEndDate());
+            long totalCount = medicationLogRepository.countByUserIdAndStatusAndRecordDateBetween(
+                    report.getUserId(), MedicationLogStatus.NOT_RECORDED, report.getWeekStartDate(), report.getWeekEndDate()) + takenCount;
+
+            WeeklyReportResponse.MedicationSummary medicationSummary = WeeklyReportResponse.MedicationSummary.builder()
+                    .takenCount(takenCount)
+                    .totalCount(totalCount)
+                    .comment("이번 주 " + totalCount + "번 중 " + takenCount + "번 챙기셨어요.")
+                    .build();
+
+            return WeeklyReportResponse.builder()
+                    .weekStartDate(report.getWeekStartDate().toString())
+                    .weekEndDate(report.getWeekEndDate().toString())
+                    .isBaselineSufficient(report.isBaselineSufficient())
+                    .weeklyComment(report.getAiSummary())
+                    .weeklyDetail(report.getAiSummary())   // weeklyDetail 별도 저장 컬럼이 없다면 임시로 동일하게
+                    .metrics(metrics)
+                    .medication(medicationSummary)
+                    .nextWeekSuggestion("")   // 별도 저장 컬럼 없으면 빈 값
+                    .build();
+
+        } catch (Exception e) {
+            throw new RuntimeException("과거 리포트 변환 실패", e);
+        }
     }
 }
