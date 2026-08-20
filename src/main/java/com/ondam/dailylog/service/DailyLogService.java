@@ -155,8 +155,9 @@ public class DailyLogService {
                 morningAnswerItem = morningAnswerJson != null
                         ? objectMapper.readValue(morningAnswerJson, DailyLogResponse.MorningAnswerItem.class)
                         : null;
-                eveningAnswerItems = objectMapper.readValue(eveningAnswersJson,
-                        new TypeReference<List<DailyLogResponse.EveningAnswerItem>>() {});
+                eveningAnswerItems = eveningAnswersJson != null
+                        ? objectMapper.readValue(eveningAnswersJson, new TypeReference<List<DailyLogResponse.EveningAnswerItem>>() {})
+                        : new ArrayList<>();
             } catch (JacksonException e) {
                 throw new RuntimeException("DailyLog 파싱 실패", e);
             }
