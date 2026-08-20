@@ -101,7 +101,7 @@ public class DailyLogService {
         Optional<DailyLog> existingLogOpt = dailyLogRepository.findByUserIdAndLogDate(userId, date);
 
         if (existingLogOpt.isPresent()) {
-            // 이미 있으면 → 기존 걸 지우고 새로 만들어서 저장 (가장 간단한 방법)
+            // 이미 있으면 → 기존 걸 지우고 새로 만들어서 저장
             dailyLogRepository.delete(existingLogOpt.get());
         }
 
