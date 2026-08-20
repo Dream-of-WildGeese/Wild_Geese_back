@@ -47,7 +47,7 @@ public class QuestionTemplateSeeder implements CommandLineRunner {
                 .content("오늘 수면은 어떠셨나요?")
                 .answerType(AnswerType.CHOICE)
                 .choices("""
-                        [{"label":"푹 잤어요","value":3},{"label":"조금 부족했어요","value":2},{"label":"거의 못 잤어요","value":1}]
+                        [{"label":"7시간 이상 잤어요","value":3},{"label":"5~7시간 잤어요","value":2},{"label":"5시간도 못 잤어요","value":1}]
                         """)
                 .build());
 
@@ -57,7 +57,7 @@ public class QuestionTemplateSeeder implements CommandLineRunner {
                 .content("오늘 식사는 어떠셨나요?")
                 .answerType(AnswerType.CHOICE)
                 .choices("""
-                        [{"label":"잘 챙겼어요","value":3},{"label":"한두 끼 걸렀어요","value":2},{"label":"입맛이 없었어요","value":1}]
+                        [{"label":"세 끼 모두 챙겼어요","value":3},{"label":"두 끼 챙겼어요","value":2},{"label":"한 끼만 먹었어요","value":1}]
                         """)
                 .build());
 
@@ -67,12 +67,11 @@ public class QuestionTemplateSeeder implements CommandLineRunner {
                 .content("오늘 외출이나 활동은 어떠셨나요?")
                 .answerType(AnswerType.CHOICE)
                 .choices("""
-                        [{"label":"가볍게 움직였어요","value":3},{"label":"집에서 쉬었어요","value":2},{"label":"거의 못 움직였어요","value":1}]
+                        [{"label":"1시간 이상 걸었어요'","value":3},{"label":"30분~1시간 걸었어요","value":2},{"label":"거의 안 걸었어요","value":1}]
                         """)
                 .build());
 
         // ── CUSTOM - 질환 맞춤 (음성 전용, TEXT) ────────────────
-        // ⚠️ 온보딩 선택지(①~⑥ + 기타/없음) 기준. GPT 연동 전까지는 여기서 매칭해서 사용,
         //    연동 후에는 GPT 호출 실패 시 폴백으로만 사용.
 
         // ① 고혈압
