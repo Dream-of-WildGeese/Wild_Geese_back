@@ -33,7 +33,6 @@ public class NotificationScheduler {
             LocalTime scheduledTime,
             LocalTime now
     ) {
-
         if (scheduledTime == null) {
             return false;
         }
@@ -51,10 +50,6 @@ public class NotificationScheduler {
                 )
                 .withSecond(0)
                 .withNano(0);
-
-        System.out.println(
-                " NotificationScheduler 실행 now = " + now
-        );
 
         MedicationDay today =
                 MedicationDay.valueOf(
@@ -78,20 +73,6 @@ public class NotificationScheduler {
 
             Long userId = setting.getUser().getId();
 
-            System.out.println(
-                    "[알림 설정 체크]"
-                            + " userId=" + userId
-                            + ", morningEnabled="
-                            + setting.isMorningEnabled()
-                            + ", morningTime="
-                            + setting.getMorningTime()
-                            + ", eveningEnabled="
-                            + setting.isEveningEnabled()
-                            + ", eveningTime="
-                            + setting.getEveningTime()
-                            + ", now=" + now
-            );
-
             /*
              * 아침 알림
              */
@@ -100,11 +81,6 @@ public class NotificationScheduler {
                     setting.getMorningTime(),
                     now
             )) {
-
-                System.out.println(
-                        " 아침 알림 조건 통과 userId="
-                                + userId
-                );
 
                 notificationService.createNotification(
                         userId,
@@ -131,11 +107,6 @@ public class NotificationScheduler {
                     setting.getEveningTime(),
                     now
             )) {
-
-                System.out.println(
-                        " 저녁 알림 조건 통과 userId="
-                                + userId
-                );
 
                 notificationService.createNotification(
                         userId,
@@ -164,34 +135,19 @@ public class NotificationScheduler {
         List<MedicationSchedule> medicationSchedules =
                 medicationScheduleRepository.findAll();
 
-        for (MedicationSchedule schedule
-                : medicationSchedules) {
+        for (MedicationSchedule schedule : medicationSchedules) {
 
             Long userId =
                     schedule.getMedication()
                             .getUser()
                             .getId();
 
-            System.out.println(
-                    "[복약 알림 체크]"
-                            + " userId=" + userId
-                            + ", enabled="
-                            + schedule.isEnabled()
-                            + ", scheduledTime="
-                            + schedule.getScheduledTime()
-                            + ", now=" + now
-                            + ", today=" + today
-                            + ", daysOfWeek="
-                            + schedule.getDaysOfWeek()
-            );
-
             // 복약 스케줄 OFF
             if (!schedule.isEnabled()) {
                 continue;
             }
 
-            // 기존 equals(now) 대신
-            // 2분 범위 허용
+            // 설정 시간부터 2분 이내인지 확인
             if (!isWithinTimeRange(
                     schedule.getScheduledTime(),
                     now
@@ -214,14 +170,8 @@ public class NotificationScheduler {
             if (notificationSetting == null
                     || !notificationSetting
                     .isMedicationEnabled()) {
-
                 continue;
             }
-
-            System.out.println(
-                    " 복약 알림 조건 통과 userId="
-                            + userId
-            );
 
             notificationService.createNotification(
                     userId,
