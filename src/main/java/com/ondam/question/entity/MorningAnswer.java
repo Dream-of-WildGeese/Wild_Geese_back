@@ -51,4 +51,11 @@ public class MorningAnswer extends BaseTimeEntity {
         this.inputType = inputType;
         this.answeredAt = LocalDateTime.now();
     }
+
+    public void update(String textValue, InputType inputType, String audioUrl) {
+        this.textValue = textValue;
+        this.inputType = inputType;
+        this.answeredAt = LocalDateTime.now();
+        this.audioUrl = audioUrl;
+    }
 }

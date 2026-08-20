@@ -349,19 +349,30 @@ public class MorningQuestionService {
 
     @Transactional
     public MorningAnswerResponse createAnswerWithStt(MultipartFile audioFile, Long questionId, Long userId) {
+
         String audioUrl = s3Uploader.upload(audioFile, "morning-answers");
         String transcript = sttClient.transcribe(audioFile);
 
-        MorningAnswer answer = MorningAnswer.builder()
-                .morningQuestionId(questionId)
-                .userId(userId)
-                .textValue(transcript)
-                .inputType(InputType.VOICE)
-                .answeredAt(LocalDateTime.now())
-                .audioUrl(audioUrl)
-                .build();
+        Optional<MorningAnswer> existingOpt = morningAnswerRepository
+                .findFirstByMorningQuestionIdAndUserId(questionId, userId);
 
-        MorningAnswer savedAnswer = morningAnswerRepository.save(answer);
+        MorningAnswer savedAnswer;
+
+        if (existingOpt.isPresent()) {
+            MorningAnswer existingAnswer = existingOpt.get();
+            existingAnswer.update(transcript, InputType.VOICE, audioUrl);
+            savedAnswer = existingAnswer;
+        } else {
+            MorningAnswer answer = MorningAnswer.builder()
+                    .morningQuestionId(questionId)
+                    .userId(userId)
+                    .textValue(transcript)
+                    .inputType(InputType.VOICE)
+                    .answeredAt(LocalDateTime.now())
+                    .audioUrl(audioUrl)
+                    .build();
+            savedAnswer = morningAnswerRepository.save(answer);
+        }
 
         return new MorningAnswerResponse(
                 savedAnswer.getId(),
