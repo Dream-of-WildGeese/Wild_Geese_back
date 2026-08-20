@@ -264,20 +264,86 @@ public class MorningQuestionService {
 
     @Transactional
     public void toggleReaction(Long userId, Long answerId, String emoji) {
-        Optional<MorningReaction> existing = morningReactionRepository
-                .findByMorningAnswerIdAndUserIdAndEmoji(answerId, userId, emoji);
+
+        Optional<MorningReaction> existing =
+                morningReactionRepository
+                        .findByMorningAnswerIdAndUserIdAndEmoji(
+                                answerId,
+                                userId,
+                                emoji
+                        );
 
         if (existing.isPresent()) {
-            // 이미 누른 이모지면 삭제 (토글 오프)
+
+            // 이미 누른 이모지면 삭제
             morningReactionRepository.delete(existing.get());
+
         } else {
-            // 안 누른 거면 새로 추가 (토글 온)
-            MorningReaction reaction = MorningReaction.builder()
-                    .morningAnswerId(answerId)
-                    .userId(userId)
-                    .emoji(emoji)
-                    .build();
+
+            // 1. 반응 저장
+            MorningReaction reaction =
+                    MorningReaction.builder()
+                            .morningAnswerId(answerId)
+                            .userId(userId)
+                            .emoji(emoji)
+                            .build();
+
             morningReactionRepository.save(reaction);
+
+            // 2. 반응 대상 답변 조회
+            MorningAnswer answer =
+                    morningAnswerRepository.findById(answerId)
+                            .orElseThrow(() ->
+                                    new RuntimeException("아침 답변을 찾을 수 없습니다.")
+                            );
+
+            // 3. 알림 받을 사람 = 답변 작성자
+            Long receiverUserId = answer.getUserId();
+
+            // 자기 답변에 자기 반응이면 알림 안 보냄
+            if (receiverUserId.equals(userId)) {
+                return;
+            }
+
+            // 4. 상대방의 가족 반응 알림 설정 확인
+            NotificationSetting setting =
+                    notificationSettingRepository
+                            .findByUserId(receiverUserId)
+                            .orElse(null);
+
+            if (setting == null || !setting.isFamilyReactionEnabled()) {
+                return;
+            }
+
+            // 5. 반응한 사람 조회
+            User sender =
+                    userRepository.findById(userId)
+                            .orElseThrow(() ->
+                                    new RuntimeException("사용자를 찾을 수 없습니다.")
+                            );
+
+            String title = "가족이 반응을 남겼어요!";
+            String content =
+                    sender.getName()
+                            + "님이 회원님의 아침 답변에 "
+                            + emoji
+                            + " 반응을 남겼어요.";
+
+            // 6. 앱 내부 알림 저장
+            notificationService.createNotification(
+                    receiverUserId,
+                    NotificationType.FAMILY_REACTION,
+                    title,
+                    content,
+                    LocalDateTime.now()
+            );
+
+            // 7. 실제 Web Push
+            webPushService.sendPush(
+                    receiverUserId,
+                    title,
+                    content
+            );
         }
     }
 
