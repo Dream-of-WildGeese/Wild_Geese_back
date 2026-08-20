@@ -221,6 +221,16 @@ public class WeeklyReportService {
                 .build();
     }
 
+    private String translateMetricType(String key) {
+        return switch (key) {
+            case "CONDITION" -> "컨디션";
+            case "SLEEP" -> "수면";
+            case "MEAL" -> "식사";
+            case "ACTIVITY" -> "활동";
+            default -> key;
+        };
+    }
+
     private String buildMetricsDescription(
             Map<String, WeeklyReportResponse.MetricDetail> metrics,
             Map<String, List<Double>> lastWeekDailyMap) {
@@ -231,6 +241,7 @@ public class WeeklyReportService {
         for (Map.Entry<String, WeeklyReportResponse.MetricDetail> entry : metrics.entrySet()) {
             WeeklyReportResponse.MetricDetail detail = entry.getValue();
             String key = entry.getKey();
+            String koreanName = translateMetricType(key);
 
             sb.append(key).append(": ");
             sb.append("이번주 평균 ").append(detail.current());
@@ -279,22 +290,21 @@ public class WeeklyReportService {
             {
               "weeklyComment": "이번 주 전체 흐름을 요약하는 짧은 제목 (예: '이번 주는 활동량이 줄었어요')",
               "weeklyDetail": "weeklyComment를 뒷받침하는 두 문장. 여러 지표를 연결해서 설명하고, 잘 지킨 부분이 있으면 짧게 격려하세요. 마지막 문장은 다음 주 제안이나 안부를 건네는 부드러운 문장으로 마무리하세요.",
-              "conditionComment": "다음 두 가지를 각각 한 문장씩, 총 두 문장으로 작성하세요. 1) 이번 주 요일별 데이터를 보고, 낮았던 날이 있으면 정확한 요일(또는 요일 범위)을 짚어 설명하세요. 낮은 날이 없으면 '~요일 모두 좋은 컨디션을 유지하셨어요'처럼 칭찬하세요. 2) 지난주 데이터와 비교해서 비슷한 수준인지, 좋아졌는지, 나빠졌는지 짧게 언급하세요.",
-              "sleepComment": "conditionComment와 같은 두 문장 구조(이번 주 요일 지적 + 지난주 대비 비교)로 작성하세요.",
-              "mealComment": "conditionComment와 같은 두 문장 구조(이번 주 요일 지적 + 지난주 대비 비교)로 작성하세요. 잘 챙긴 날이 많으면 칭찬을 포함하세요.",
-              "activityComment": "conditionComment와 같은 두 문장 구조(이번 주 요일 지적 + 지난주 대비 비교)로 작성하세요. 걸음수 변화가 있으면 '평소보다 하루 평균 ~만큼' 형태로 구체적 수치를 언급하세요.",
-              "customComment": "지병 관련 답변을 요약한 한 줄 코멘트",
+              "conditionComment": "다음 두 가지를 각각 한 문장씩, 총 두 문장으로 작성하세요. 1) 이번 주 요일별 데이터를 보고, 낮았던 날이 있으면 정확한 요일(또는 요일 범위)을 짚어 설명하세요. '점수가 낮았어요' 대신 '컨디션이 안 좋으셨어요'처럼 상태를 표현하는 말로 쓰세요. 낮은 날이 없으면 '~요일 모두 좋은 컨디션을 유지하셨어요'처럼 칭찬하세요. 2) 지난주와 비교해서 '좋아졌어요', '비슷해요', '나빠졌어요' 중 하나로 짧게 표현하세요. 절대로 숫자나 소수점 수치를 언급하지 마세요.",
+              "sleepComment": "conditionComment와 같은 두 문장 구조로 작성하세요. 숫자나 점수 표현 없이, '푹 주무셨어요', '잠이 부족하셨어요'처럼 상태로 표현하세요.",
+              "mealComment": "conditionComment와 같은 두 문장 구조로 작성하세요. 숫자나 점수 표현 없이, '잘 챙기셨어요', '많이 거르셨어요'처럼 상태로 표현하세요.",
+              "activityComment": "conditionComment와 같은 두 문장 구조로 작성하세요. 숫자나 소수점 수치 없이, '활동량이 늘었어요', '많이 못 움직이셨어요'처럼 상태로 표현하세요.",              "customComment": "지병 관련 답변을 요약한 한 줄 코멘트",
               "nextWeekSuggestion": "다음 주를 위한 부드러운 제안 한 문장. 명령이 아니라 제안하는 어투로"
             }
     
             conditionComment 예시: "특히 목요일과 금요일에 컨디션이 안 좋으셨어요. 지난주와 비교해 컨디션은 비슷한 수준이에요."
-                    
-    
+            
             문체 규칙:
             - 모든 문장은 존댓말로, 부드럽고 다정한 어투로 작성하세요.
             - weeklyComment는 15자 내외의 짧은 제목, weeklyDetail은 두 문장 이내로 작성하세요.
-            - 지표별 코멘트(conditionComment~activityComment)는 반드시 두 문장으로, 이번주 요일별 데이터와 지난주 요일별 데이터에 실제로 나타나는 값만 근거로 사용하세요. 데이터에 없는 요일이나 수치를 지어내지 마세요.
-            - "~것 같아요"는 이번 주 요일을 짚을 때 자연스럽게 쓸 수 있지만, 지난주 비교 문장에서는 "~예요", "~해요"처럼 단정적으로 쓰세요.
+            - weeklyDetail을 포함한 모든 문장에서 지표 이름은 반드시 한글(컨디션/수면/식사/활동)로만 쓰세요. 영어 단어(SLEEP, MEAL 등)를 절대 쓰지 마세요.
+            - 지표별 코멘트(conditionComment~activityComment)는 반드시 두 문장으로, 요일별 데이터에 실제로 나타나는 값만 근거로 사용하세요. 데이터에 없는 요일을 지어내지 마세요.
+            - "점수", "스코어", 소수점 수치, 정확한 숫자를 절대 언급하지 마세요. 대신 '좋았어요', '부족했어요', '늘었어요', '줄었어요' 같은 자연스러운 표현만 쓰세요.
             - 절대로 의학적 진단을 내리거나, "때문에" 같은 인과관계를 단정짓지 마세요.
             - 나쁜 수치가 있어도 걱정을 유발하지 말고, 담담하고 따뜻하게 전달하세요.
             """, metricsDesc, customDesc);
