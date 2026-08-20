@@ -1,4 +1,25 @@
 package com.ondam.question.dto.response;
 
-public class MorningQuestionResponse {
+import lombok.Builder;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Builder
+public record MorningQuestionResponse (
+    Long questionId,
+    String questionDate,
+    String content,
+    String myAnswer,
+    List<FamilyAnswerItem> familyAnswers
+) {
+    @Builder
+    public record FamilyAnswerItem(
+            Long answerId,
+            Long userId,
+            String name,
+            String role,
+            String textValue,
+            LocalDateTime answeredAt
+    ) {}
 }

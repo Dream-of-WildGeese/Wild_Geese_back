@@ -11,20 +11,14 @@ import java.util.List;
 
 public record HealthProfileUpdateRequest(
 
-        @NotBlank
-        String name,
-
         @NotNull
         LocalDate birthDate,
-
-        @NotNull
-        UserRole role,
 
         @NotNull
         Gender gender,
 
         List<String> diseases,
 
-        WellnessInterest wellnessInterests
+        List<WellnessInterest> wellnessInterests
 ) {
 }

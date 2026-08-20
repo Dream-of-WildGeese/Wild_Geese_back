@@ -7,3 +7,19 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
+
+aws:
+  s3:
+    bucket: ondam-storage
+    region: ap-northeast-2
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: gpt-4o-mini
+
+webpush:
+  public-key: ${VAPID_PUBLIC_KEY}
+  private-key: ${VAPID_PRIVATE_KEY}
+  subject: mailto:stella2810@naver.com
