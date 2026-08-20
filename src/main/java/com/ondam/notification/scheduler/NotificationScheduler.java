@@ -53,68 +53,6 @@ public class NotificationScheduler {
          * =============================
          */
 
-        List<NotificationSetting> settings =
-                notificationSettingRepository.findAll();
-
-        for (NotificationSetting setting : settings) {
-
-            Long userId = setting.getUser().getId();
-
-            /*
-             * 아침 알림
-             */
-            if (setting.isMorningEnabled()
-                    && setting.getMorningTime() != null
-                    && setting.getMorningTime().equals(now)) {
-
-                notificationService.createNotification(
-                        userId,
-                        NotificationType.MORNING_QUESTION,
-                        "아침 연결 질문",
-                        "오늘의 아침 질문이 도착했어요.",
-                        LocalDateTime.now(
-                                ZoneId.of("Asia/Seoul")
-                        )
-                );
-
-                webPushService.sendPush(
-                        userId,
-                        "아침 연결 질문",
-                        "오늘의 아침 질문이 도착했어요."
-                );
-            }
-
-            /*
-             * 저녁 알림
-             */
-            if (setting.isEveningEnabled()
-                    && setting.getEveningTime() != null
-                    && setting.getEveningTime().equals(now)) {
-
-                notificationService.createNotification(
-                        userId,
-                        NotificationType.EVENING_CHECK,
-                        "저녁 건강 체크",
-                        "오늘의 건강 체크 시간이 되었어요.",
-                        LocalDateTime.now(
-                                ZoneId.of("Asia/Seoul")
-                        )
-                );
-
-                webPushService.sendPush(
-                        userId,
-                        "저녁 건강 체크",
-                        "오늘의 건강 체크 시간이 되었어요."
-                );
-            }
-        }
-
-        /*
-         * =============================
-         * 복약 알림
-         * =============================
-         */
-
         List<MedicationSchedule> medicationSchedules =
                 medicationScheduleRepository.findAll();
 
@@ -125,54 +63,79 @@ public class NotificationScheduler {
                             .getUser()
                             .getId();
 
-            // 복약 스케줄 OFF
+            // 1. 복약 스케줄 OFF
             if (!schedule.isEnabled()) {
                 continue;
             }
 
-            // 복약 시간이 설정되지 않은 경우
+            // 2. 약 자체가 비활성화된 경우
+            if (!schedule.getMedication().isActive()) {
+                continue;
+            }
+
+            // 3. 복약 시간이 없는 경우
             if (schedule.getScheduledTime() == null) {
                 continue;
             }
 
-            // 현재 시간이 복약 시간과 정확히 같은지 확인
+            // 4. 현재 시간이 복약 시간과 정확히 같은지 확인
             if (!schedule.getScheduledTime().equals(now)) {
                 continue;
             }
 
-            // 오늘이 복약 요일인지 확인
+            // 5. 오늘 복용하는 약인지 확인
             if (!schedule.getDaysOfWeek().contains(today)) {
                 continue;
             }
 
+            // 6. 사용자 복약 알림 설정 확인
             NotificationSetting notificationSetting =
                     notificationSettingRepository
                             .findByUserId(userId)
                             .orElse(null);
 
-            // 복약 알림 설정이 없거나 OFF
             if (notificationSetting == null
                     || !notificationSetting.isMedicationEnabled()) {
                 continue;
             }
 
+            // 7. 알림 내용 생성
+            String title = "복약 알림";
+
+            String content =
+                    schedule.getMedication().getName()
+                            + " "
+                            + schedule.getScheduledTime()
+                            + " 복용 시간이에요.";
+
+            // 8. 오늘 이미 같은 복약 알림을 보냈으면 건너뜀
+            if (notificationService.hasMedicationNotificationToday(
+                    userId,
+                    title,
+                    content
+            )) {
+                continue;
+            }
+
+            // 9. 내부 알림 저장
             notificationService.createNotification(
                     userId,
                     NotificationType.MEDICATION,
-                    "복약 알림",
-                    schedule.getMedication().getName()
-                            + " 복용 시간이에요.",
+                    title,
+                    content,
                     LocalDateTime.now(
                             ZoneId.of("Asia/Seoul")
                     )
             );
 
+            // 10. 실제 Web Push
             webPushService.sendPush(
                     userId,
-                    "복약 알림",
-                    schedule.getMedication().getName()
-                            + " 복용 시간이에요."
+                    title,
+                    content
             );
         }
+
+
     }
 }

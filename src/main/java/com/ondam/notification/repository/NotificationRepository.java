@@ -1,5 +1,6 @@
 package com.ondam.notification.repository;
-
+import com.ondam.notification.entity.NotificationType;
+import java.time.LocalDateTime;
 import com.ondam.notification.entity.Notification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,5 +19,21 @@ public interface NotificationRepository
     Optional<Notification> findByIdAndUserId(
             Long notificationId,
             Long userId
+    );
+
+    boolean existsByUserIdAndTypeAndScheduledAtBetween(
+            Long userId,
+            NotificationType type,
+            LocalDateTime start,
+            LocalDateTime end
+    );
+
+    boolean existsByUserIdAndTypeAndTitleAndContentAndScheduledAtBetween(
+            Long userId,
+            NotificationType type,
+            String title,
+            String content,
+            LocalDateTime start,
+            LocalDateTime end
     );
 }

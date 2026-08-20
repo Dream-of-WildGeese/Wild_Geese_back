@@ -18,7 +18,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
@@ -104,6 +106,49 @@ public class NotificationService {
         );
 
         return notificationRepository.save(notification);
+    }
+
+    public boolean hasNotificationToday(
+            Long userId,
+            NotificationType type
+    ) {
+        LocalDateTime startOfDay =
+                LocalDate.now(ZoneId.of("Asia/Seoul"))
+                        .atStartOfDay();
+
+        LocalDateTime endOfDay =
+                startOfDay.plusDays(1);
+
+        return notificationRepository
+                .existsByUserIdAndTypeAndScheduledAtBetween(
+                        userId,
+                        type,
+                        startOfDay,
+                        endOfDay
+                );
+    }
+
+    public boolean hasMedicationNotificationToday(
+            Long userId,
+            String title,
+            String content
+    ) {
+        LocalDateTime startOfDay =
+                LocalDate.now(ZoneId.of("Asia/Seoul"))
+                        .atStartOfDay();
+
+        LocalDateTime endOfDay =
+                startOfDay.plusDays(1);
+
+        return notificationRepository
+                .existsByUserIdAndTypeAndTitleAndContentAndScheduledAtBetween(
+                        userId,
+                        NotificationType.MEDICATION,
+                        title,
+                        content,
+                        startOfDay,
+                        endOfDay
+                );
     }
 
 }
