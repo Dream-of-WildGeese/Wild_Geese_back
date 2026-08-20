@@ -28,19 +28,6 @@ public class NotificationScheduler {
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final WebPushService webPushService;
 
-    // 설정 시간부터 2분 이내까지 허용
-    private boolean isWithinTimeRange(
-            LocalTime scheduledTime,
-            LocalTime now
-    ) {
-        if (scheduledTime == null) {
-            return false;
-        }
-
-        return !scheduledTime.isAfter(now)
-                && scheduledTime.isAfter(now.minusMinutes(2));
-    }
-
     @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void createScheduledNotifications() {
@@ -77,10 +64,8 @@ public class NotificationScheduler {
              * 아침 알림
              */
             if (setting.isMorningEnabled()
-                    && isWithinTimeRange(
-                    setting.getMorningTime(),
-                    now
-            )) {
+                    && setting.getMorningTime() != null
+                    && setting.getMorningTime().equals(now)) {
 
                 notificationService.createNotification(
                         userId,
@@ -103,10 +88,8 @@ public class NotificationScheduler {
              * 저녁 알림
              */
             if (setting.isEveningEnabled()
-                    && isWithinTimeRange(
-                    setting.getEveningTime(),
-                    now
-            )) {
+                    && setting.getEveningTime() != null
+                    && setting.getEveningTime().equals(now)) {
 
                 notificationService.createNotification(
                         userId,
@@ -147,17 +130,18 @@ public class NotificationScheduler {
                 continue;
             }
 
-            // 설정 시간부터 2분 이내인지 확인
-            if (!isWithinTimeRange(
-                    schedule.getScheduledTime(),
-                    now
-            )) {
+            // 복약 시간이 설정되지 않은 경우
+            if (schedule.getScheduledTime() == null) {
+                continue;
+            }
+
+            // 현재 시간이 복약 시간과 정확히 같은지 확인
+            if (!schedule.getScheduledTime().equals(now)) {
                 continue;
             }
 
             // 오늘이 복약 요일인지 확인
-            if (!schedule.getDaysOfWeek()
-                    .contains(today)) {
+            if (!schedule.getDaysOfWeek().contains(today)) {
                 continue;
             }
 
@@ -168,8 +152,7 @@ public class NotificationScheduler {
 
             // 복약 알림 설정이 없거나 OFF
             if (notificationSetting == null
-                    || !notificationSetting
-                    .isMedicationEnabled()) {
+                    || !notificationSetting.isMedicationEnabled()) {
                 continue;
             }
 
